@@ -9,6 +9,7 @@ import { deckAudio } from './audio/deckAudio'
 import { Room } from './scene/Room'
 import { Search } from './ui/Search'
 import { useWeather } from './scene/weather'
+import { useIdle } from './ui/useIdle'
 
 function useHint(): string {
   const deck = useDeck()
@@ -58,6 +59,8 @@ export default function App() {
   const album = useDeck((s) => s.album)
   const focus = useDeck((s) => s.focus)
   const rain = useWeather((s) => s.rain)
+  // With no input for a while the controls fade away, leaving just the room
+  const idle = useIdle(4000)
 
   useEffect(() => {
     if (!isCallback()) return
@@ -124,7 +127,7 @@ export default function App() {
     document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()
 
   return (
-    <div className="app">
+    <div className={`app ${idle ? 'app--idle' : ''}`}>
       <Room albums={albums} />
 
       <header className="hud-top">

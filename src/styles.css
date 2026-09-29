@@ -476,3 +476,25 @@ button.ghost {
     display: none;
   }
 }
+
+/* Idle: controls fade out, leaving only the room (toasts still show) */
+.hud-top,
+.deck-bar,
+.hint,
+.free-hint {
+  transition: opacity 0.25s ease;
+}
+
+.app--idle .hud-top,
+.app--idle .deck-bar,
+.app--idle .hint,
+.app--idle .free-hint {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.9s ease;
+}
+
+.app--idle,
+.app--idle canvas {
+  cursor: none !important;
+}
