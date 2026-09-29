@@ -59,9 +59,11 @@ El workflow `Deploy to GitHub Pages` también se puede lanzar a mano desde la pe
 
 ## Créditos
 
-Modelos y texturas de la habitación de [Poly Haven](https://polyhaven.com) (CC0): *Modern Wooden Cabinet* (Patrik Pangerl), *Modern Arm Chair 01* (Vibrant Nordic), *Potted Plant 02* (Rico Cilliers), *Herringbone Parquet*, *Plastered Wall 04*, *Wool Boucle*, *Oak Veneer 02*.
+Modelos y texturas de la habitación de [Poly Haven](https://polyhaven.com) (CC0): *Modern Wooden Cabinet* (Patrik Pangerl), *Modern Arm Chair 01* (Vibrant Nordic), *Potted Plant 02* (Rico Cilliers), *Herringbone Parquet*, *Plastered Wall 04*, *Wool Boucle*, *Oak Veneer 02*, *Ceramic Vase 01/02/03* (James Ray Cock), *Wooden Bowl 02* (Kuutti Siitonen).
 
 Vista de la ciudad: [*Manhattan at night south of Rockefeller Center panorama*](https://commons.wikimedia.org/wiki/File:Manhattan_at_night_south_of_Rockefeller_Center_panorama_(11256p).jpg), de Rhododendrites, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); redimensionada a 4096 px (`public/city/manhattan-night.webp`), que se distribuye bajo la misma licencia.
+
+Estantería: inspirada en el sistema Vitsoe 606 (Dieter Rams, 1960); proyecto personal sin relación con Vitsoe.
 
 Altavoces: modelo inspirado en los Bang & Olufsen BeoLab 18; proyecto personal sin relación con Bang & Olufsen.
 

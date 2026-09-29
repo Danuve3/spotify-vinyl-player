@@ -13,7 +13,7 @@ export type ArmState =
   | 'down' // stylus in the groove
   | 'auto-in' // automatic cueing to the lead-in
   | 'auto-return' // automatic return to the rest
-export type Focus = 'room' | 'crate' | 'deck' | 'window' | 'chair' | 'free'
+export type Focus = 'room' | 'crate' | 'deck' | 'window' | 'chair' | 'shelf' | 'free'
 
 interface DeckState {
   focus: Focus

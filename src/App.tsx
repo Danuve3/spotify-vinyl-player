@@ -120,6 +120,7 @@ export default function App() {
           <button className="ghost" onClick={() => useDeck.getState().setFocus('room')}>Sala</button>
           <button className="ghost" onClick={() => useDeck.getState().setFocus('window')}>Ventana</button>
           <button className="ghost" onClick={() => useDeck.getState().setFocus('chair')}>Sillón</button>
+          <button className="ghost" onClick={() => useDeck.getState().setFocus('shelf')}>Estantería</button>
           <button
             className={`ghost toggle ${focus === 'free' ? 'toggle--on' : ''}`}
             onClick={() => useDeck.getState().setFocus('free')}

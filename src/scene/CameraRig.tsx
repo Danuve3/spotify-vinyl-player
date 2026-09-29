@@ -24,6 +24,8 @@ const POSES: Record<SeatedFocus, Pose> = {
   window: { pos: new THREE.Vector3(1.25, 1.52, 1.6), target: new THREE.Vector3(2.6, 1.4, 1.35), fov: 58 },
   // In front of the armchair, with the lamp behind it
   chair: { pos: new THREE.Vector3(0.35, 1.3, 2.45), target: new THREE.Vector3(-1.1, 0.6, 1.45), fov: 55 },
+  // From beside the deck, turned round to the shelving on the front wall
+  shelf: { pos: new THREE.Vector3(0.3, 1.22, 0.75), target: new THREE.Vector3(0.24, 1.14, 3.4), fov: 50 },
 }
 
 // Wheel zoom: some views ease continuously from their close pose to a wider
@@ -106,6 +108,7 @@ export function CameraRig() {
       if (e.key === '4') setFocus('window')
       if (e.key === '5') setFocus('chair')
       if (e.key === '6') setFocus('free')
+      if (e.key === '7') setFocus('shelf')
       if (e.key.toLowerCase() === 'f') flipVinyl()
       if (e.key === 'Escape') setFocus('room')
     }

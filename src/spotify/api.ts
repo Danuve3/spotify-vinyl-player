@@ -75,9 +75,16 @@ function toAlbum(a: any): Album {
   }
 }
 
-export async function getSavedAlbums(limit = 50): Promise<Album[]> {
-  const res = await request<any>(`/me/albums?limit=${limit}`)
-  return res.items.map((item: any) => toAlbum(item.album))
+/** The most recently saved albums, fetched 50 at a time (the API maximum). */
+export async function getSavedAlbums(total = 150): Promise<Album[]> {
+  const albums: Album[] = []
+  let next: string | null = `/me/albums?limit=50`
+  while (next && albums.length < total) {
+    const page: any = await request<any>(next.replace(API, ''))
+    albums.push(...page.items.map((item: any) => toAlbum(item.album)))
+    next = page.next
+  }
+  return albums.slice(0, total)
 }
 
 export async function searchAlbums(query: string): Promise<Album[]> {

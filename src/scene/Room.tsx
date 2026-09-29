@@ -16,6 +16,7 @@ import { Speakers } from './Speakers'
 import { GlassReflection } from './GlassReflection'
 import { Rain } from './Rain'
 import { LampCord } from './LampCord'
+import { Shelf } from './Shelf'
 import { lampLevel, useLamp } from './lamp'
 
 // The living room: static geometry uses light baked in Blender (unlit
@@ -229,6 +230,7 @@ export function Room({ albums }: Props) {
           {quality.post && <GlassReflection />}
           <Deck />
           <Crate albums={albums} />
+          <Shelf albums={albums} />
         </Suspense>
         {quality.post && (
           <EffectComposer multisampling={quality.msaa}>
