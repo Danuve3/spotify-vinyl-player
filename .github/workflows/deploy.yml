@@ -1,8 +1,9 @@
 name: Deploy to GitHub Pages
 
+# Deploys are cut from tags: `git tag v1.2.0 && git push origin v1.2.0`
 on:
   push:
-    branches: [main]
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:

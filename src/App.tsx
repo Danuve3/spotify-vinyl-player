@@ -1,16 +1,60 @@
 import { useEffect, useState } from 'react'
 import { handleCallback, isCallback, isLoggedIn, login, logout } from './spotify/auth'
-import { getAlbum, getSavedAlbums, play, type Album } from './spotify/api'
+import { getSavedAlbums, type Album } from './spotify/api'
 import { useSpotifyPlayer } from './spotify/player'
+import { usePlayback } from './deck/usePlayback'
+import { currentSide, useDeck } from './deck/store'
+import { spotAt } from './vinyl/sides'
+import { deckAudio } from './audio/deckAudio'
 import { Room } from './scene/Room'
-import { Crate } from './ui/Crate'
+import { Search } from './ui/Search'
+
+function useHint(): string {
+  const deck = useDeck()
+  if (!deck.album) return 'Elige un disco de la caja'
+  if (deck.vinyl === 'sleeve') return 'Haz clic en la funda para sacar el vinilo'
+  if (deck.vinyl === 'hand') return 'Clic en el vinilo: darle la vuelta · Clic en el plato: ponerlo · Clic en la funda: guardarlo'
+  if (!deck.lidOpen) return 'Tapa cerrada'
+  if (deck.arm === 'rest' && !deck.motorOn) return 'Pulsa start, o sube la palanca y lleva el brazo a mano'
+  if (deck.arm === 'lifted') return 'Arrastra el brazo hasta el surco y baja la palanca'
+  return ''
+}
+
+function NowPlaying() {
+  const deck = useDeck()
+  const side = currentSide(deck)
+  if (!deck.album || !side || !deck.contact || deck.stylusRadius === null) return null
+  const spot = spotAt(side, deck.stylusRadius)
+  const label =
+    spot.kind === 'track'
+      ? spot.track.name
+      : spot.kind === 'run-out'
+        ? 'Fin de la cara'
+        : spot.kind === 'gap'
+          ? `→ ${spot.next.name}`
+          : 'Entrada'
+  return (
+    <span className="now">
+      <em>Cara {side.name}</em> <strong>{label}</strong> · {deck.album.artist}
+    </span>
+  )
+}
+
+// Dev-only: explore the room without logging in (?preview)
+const PREVIEW = import.meta.env.DEV && new URLSearchParams(window.location.search).has('preview')
 
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(() => !isCallback() && isLoggedIn())
+  const [loggedIn, setLoggedIn] = useState(() => PREVIEW || (!isCallback() && isLoggedIn()))
   const [error, setError] = useState<string | null>(null)
   const [albums, setAlbums] = useState<Album[]>([])
-  const [current, setCurrent] = useState<Album | null>(null)
-  const { player, deviceId, snapshot, error: playerError } = useSpotifyPlayer(loggedIn)
+  const { player, deviceId, snapshot, error: playerError } = useSpotifyPlayer(loggedIn && !PREVIEW)
+  usePlayback(player, deviceId, snapshot)
+
+  const hint = useHint()
+  const message = useDeck((s) => s.message)
+  const vinyl = useDeck((s) => s.vinyl)
+  const sides = useDeck((s) => s.sides)
+  const album = useDeck((s) => s.album)
 
   useEffect(() => {
     if (!isCallback()) return
@@ -21,66 +65,81 @@ export default function App() {
 
   useEffect(() => {
     if (!loggedIn) return
+    if (PREVIEW) {
+      void import('./dev/demo').then((m) => setAlbums(m.demoAlbums()))
+      return
+    }
     getSavedAlbums()
       .then(setAlbums)
       .catch((e: Error) => setError(e.message))
   }, [loggedIn])
 
-  async function pick(album: Album) {
-    if (!deviceId) return setError('El reproductor aún se está conectando…')
-    setError(null)
-    // Browsers block audio until a user gesture unlocks it.
-    await player.current?.activateElement()
-    try {
-      const full = await getAlbum(album.id)
-      setCurrent(full)
-      await play(deviceId, full.uri, full.tracks[0].uri)
-    } catch (e) {
-      setError((e as Error).message)
-    }
-  }
+  // Messages from the deck fade after a moment
+  useEffect(() => {
+    if (!message) return
+    const t = setTimeout(() => useDeck.getState().say(null), 3500)
+    return () => clearTimeout(t)
+  }, [message])
 
-  const playing = !!snapshot && !snapshot.paused
-  const track = current?.tracks.find((t) => t.uri === snapshot?.trackUri)
+  // Browsers only allow audio after a gesture: unlock Spotify and Web Audio on the first click
+  useEffect(() => {
+    const unlock = () => {
+      deckAudio().resume()
+      void player.current?.activateElement()
+    }
+    window.addEventListener('pointerdown', unlock, { once: true })
+    return () => window.removeEventListener('pointerdown', unlock)
+  }, [player, deviceId])
 
   if (!loggedIn) {
     return (
       <main className="gate">
         <h1>Vinyl Room</h1>
         <p>Un tocadiscos, una habitación tranquila y tu colección de Spotify.</p>
-        <button onClick={() => login().catch((e: Error) => setError(e.message))}>
-          Entrar con Spotify
-        </button>
+        <button onClick={() => login().catch((e: Error) => setError(e.message))}>Entrar con Spotify</button>
         {error && <p className="error">{error}</p>}
       </main>
     )
   }
 
+  const fullscreen = () =>
+    document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()
+
   return (
     <div className="app">
-      <Room coverUrl={current?.coverUrl ?? null} spinning={playing} />
-      <Crate albums={albums} onPick={pick} />
+      <Room albums={albums} />
+
+      <header className="hud-top">
+        <Search onAdd={(a) => setAlbums((list) => [a, ...list.filter((x) => x.id !== a.id)])} />
+        <nav className="views">
+          <button className="ghost" onClick={() => useDeck.getState().setFocus('crate')}>Discos</button>
+          <button className="ghost" onClick={() => useDeck.getState().setFocus('deck')}>Tocadiscos</button>
+          <button className="ghost" onClick={() => useDeck.getState().setFocus('room')}>Sala</button>
+          <button className="ghost" onClick={() => useDeck.getState().setFocus('window')}>Ventana</button>
+          <button className="ghost" onClick={() => useDeck.getState().setFocus('chair')}>Sillón</button>
+          <button className="ghost" onClick={fullscreen} title="Pantalla completa">⛶</button>
+        </nav>
+      </header>
 
       <footer className="deck-bar">
-        <span className={`status ${deviceId ? 'status--on' : ''}`}>
-          {deviceId ? 'Conectado' : 'Conectando…'}
-        </span>
-        {current && (
-          <span className="now">
-            <strong>{track?.name ?? current.name}</strong> · {current.artist}
-          </span>
+        <span className={`status ${deviceId ? 'status--on' : ''}`}>{deviceId ? 'Conectado' : 'Conectando…'}</span>
+        <NowPlaying />
+        {!album || vinyl !== 'hand' ? null : (
+          <>
+            <button onClick={() => useDeck.getState().flipVinyl()}>Dar la vuelta</button>
+            {sides.length > 2 && <button onClick={() => useDeck.getState().swapRecord()}>Otro disco</button>}
+          </>
         )}
-        {current && (
-          <button onClick={() => player.current?.togglePlay()}>
-            {playing ? 'Pausa' : 'Reanudar'}
+        {album && vinyl === 'sleeve' && (
+          <button className="ghost" onClick={() => useDeck.getState().returnAlbum()}>
+            Devolver a la caja
           </button>
         )}
-        <button className="ghost" onClick={() => (logout(), setLoggedIn(false))}>
-          Salir
-        </button>
+        <button className="ghost" onClick={() => (logout(), setLoggedIn(false))}>Salir</button>
       </footer>
 
-      {(error || playerError) && <p className="toast">{error ?? playerError}</p>}
+      {hint && <p className="hint">{hint}</p>}
+      {(message || error || playerError) && <p className="toast">{message ?? error ?? playerError}</p>}
     </div>
   )
 }

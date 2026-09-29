@@ -74,87 +74,6 @@ button.ghost {
   height: 100%;
 }
 
-.crate {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  bottom: 72px;
-  width: min(340px, calc(100% - 32px));
-  display: flex;
-  flex-direction: column;
-  background: var(--panel);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 14px;
-}
-
-.crate__search {
-  display: flex;
-  gap: 8px;
-}
-
-.crate__search input {
-  flex: 1;
-  min-width: 0;
-  font: inherit;
-  color: var(--ink);
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  padding: 0.55em 1em;
-}
-
-.crate__heading {
-  font-family: var(--display);
-  font-size: 1.1rem;
-  margin: 14px 0 10px;
-}
-
-.crate__grid {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  overflow-y: auto;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-}
-
-.sleeve {
-  all: unset;
-  cursor: pointer;
-  display: grid;
-  gap: 2px;
-  width: 100%;
-}
-
-.sleeve img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-  border-radius: 3px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
-  transition: transform 0.2s;
-}
-
-.sleeve:hover img,
-.sleeve:focus-visible img {
-  transform: translateY(-4px) rotate(-1deg);
-}
-
-.sleeve__name,
-.sleeve__artist {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 12px;
-}
-
-.sleeve__artist {
-  color: var(--ink-dim);
-}
-
 .deck-bar {
   position: absolute;
   left: 16px;
@@ -211,4 +130,157 @@ button.ghost {
   background: var(--panel);
   padding: 8px 14px;
   border-radius: 10px;
+}
+
+.hud-top {
+  position: absolute;
+  top: 16px;
+  left: 16px;
+  right: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.hud-top > * {
+  pointer-events: auto;
+}
+
+.views {
+  display: flex;
+  gap: 6px;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px;
+}
+
+.views button.ghost {
+  border: 0;
+}
+
+.views button.ghost:hover {
+  color: var(--ink);
+}
+
+.search {
+  width: min(360px, 100%);
+}
+
+.search input {
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.7em 1.1em;
+}
+
+.search__results {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 6px;
+  max-height: 60vh;
+  overflow-y: auto;
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
+
+.search__item {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 6px;
+  border-radius: 8px;
+}
+
+.search__item:hover,
+.search__item:focus-visible {
+  background: rgba(243, 231, 211, 0.07);
+}
+
+.search__item img {
+  width: 44px;
+  height: 44px;
+  border-radius: 2px;
+  object-fit: cover;
+}
+
+.search__item span {
+  display: grid;
+  min-width: 0;
+}
+
+.search__item strong,
+.search__item small {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.search__item strong {
+  font-family: var(--display);
+  font-weight: 400;
+}
+
+.search__item small {
+  color: var(--ink-dim);
+}
+
+.now em {
+  font-style: normal;
+  color: var(--amber);
+  margin-right: 6px;
+}
+
+.hint {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: calc(100% - 32px);
+  text-align: center;
+  color: var(--ink-dim);
+  font-size: 13px;
+  text-shadow: 0 1px 8px #000;
+  pointer-events: none;
+}
+
+.toast {
+  bottom: auto;
+  top: 76px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.loader {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--wood);
+  font-family: var(--display);
+  font-size: 1.2rem;
+  color: var(--ink-dim);
+}
+
+@media (max-width: 640px) {
+  .hud-top {
+    flex-direction: column;
+  }
+  .deck-bar {
+    border-radius: 16px;
+    flex-wrap: wrap;
+  }
 }

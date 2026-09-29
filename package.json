@@ -5,7 +5,9 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "models:compress": "gltf-transform resize public/models/room.glb public/models/room.glb --width 1024 --height 1024 && gltf-transform webp public/models/room.glb public/models/room.glb --quality 85 && gltf-transform draco public/models/room.glb public/models/room.glb",
+    "lightmaps": "node blender/denoise_lightmaps.mjs"
   },
   "type": "module",
   "private": true,
@@ -16,9 +18,11 @@
     "postprocessing": "^6.39.5",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
-    "three": "^0.186.1"
+    "three": "^0.186.1",
+    "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@gltf-transform/cli": "^4.5.1",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/spotify-web-playback-sdk": "^0.1.19",

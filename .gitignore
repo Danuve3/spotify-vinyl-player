@@ -4,3 +4,9 @@ dist
 .env.local
 *.log
 *.tsbuildinfo
+
+# Blender: source scene is too big for plain git (no LFS); backups and bake intermediates
+*.blend
+*.blend1
+blender/*_bake.png
+public/models/lightmaps/*.png
