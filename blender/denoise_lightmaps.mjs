@@ -47,7 +47,7 @@ function blur(src, width, height, k) {
 
 const k = kernel(sigma)
 
-for (const name of ['arch', 'furn']) {
+for (const name of ['arch', 'furn', 'arch_off', 'furn_off']) {
   const png = `${dir}${name}.png`
   const file = `${dir}${name}.webp`
   if (!existsSync(png)) {

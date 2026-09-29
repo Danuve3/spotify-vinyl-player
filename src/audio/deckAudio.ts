@@ -135,6 +135,51 @@ export class DeckAudio {
     this.thump(1800 / weight, 0.06 * weight, 0.03, 0.12 * weight)
   }
 
+  /**
+   * Vinyl sliding against the paper inner sleeve and the card: a papery
+   * friction whose loudness follows the speed of the (eased) slide.
+   */
+  sleeveSlide(duration: number, into = false) {
+    this.resume()
+    const t = this.ctx.currentTime
+    const src = this.ctx.createBufferSource()
+    src.buffer = this.hiss
+    const band = this.ctx.createBiquadFilter()
+    band.type = 'bandpass'
+    band.Q.value = 0.6
+    band.frequency.setValueAtTime(1700, t)
+    band.frequency.linearRampToValueAtTime(3000, t + duration * 0.5)
+    band.frequency.linearRampToValueAtTime(1900, t + duration)
+    const high = this.ctx.createBiquadFilter()
+    high.type = 'highpass'
+    high.frequency.value = 500
+    // Speed of a smoothstep slide is 6s(1-s): loud mid-way, quiet at the ends
+    const curve = new Float32Array(48)
+    for (let i = 0; i < curve.length; i++) {
+      const s = i / (curve.length - 1)
+      const speed = 6 * s * (1 - s) / 1.5
+      curve[i] = 0.07 * Math.pow(speed, 0.8) * (0.85 + Math.random() * 0.3)
+    }
+    const g = this.ctx.createGain()
+    g.gain.setValueAtTime(0, t)
+    g.gain.setValueCurveAtTime(curve, t + 0.01, duration)
+    src.connect(band).connect(high).connect(g).connect(this.master)
+    src.start(t, Math.random() * 2)
+    src.stop(t + duration + 0.1)
+    // The record settles against the bottom of the sleeve, or leaves its edge
+    window.setTimeout(() => (into ? this.thump(140, 0.05, 0.08, 0.05) : this.thump(900, 0.015, 0.03, 0.03)), duration * 1000)
+  }
+
+  /** Pull-chain lamp switch: a crisp ratchet click, and a softer one on the way back. */
+  pullSwitch(release = false) {
+    this.resume()
+    if (release) this.thump(2200, 0.012, 0.015, 0.03)
+    else {
+      this.thump(3200, 0.05, 0.012, 0.16)
+      window.setTimeout(() => this.thump(700, 0.03, 0.03, 0.02), 14)
+    }
+  }
+
   recordOnPlatter() {
     this.thump(55, 0.2, 0.25, 0.08)
   }

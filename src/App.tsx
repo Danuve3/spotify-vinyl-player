@@ -8,6 +8,7 @@ import { spotAt } from './vinyl/sides'
 import { deckAudio } from './audio/deckAudio'
 import { Room } from './scene/Room'
 import { Search } from './ui/Search'
+import { useWeather } from './scene/weather'
 
 function useHint(): string {
   const deck = useDeck()
@@ -55,6 +56,8 @@ export default function App() {
   const vinyl = useDeck((s) => s.vinyl)
   const sides = useDeck((s) => s.sides)
   const album = useDeck((s) => s.album)
+  const focus = useDeck((s) => s.focus)
+  const rain = useWeather((s) => s.rain)
 
   useEffect(() => {
     if (!isCallback()) return
@@ -117,9 +120,34 @@ export default function App() {
           <button className="ghost" onClick={() => useDeck.getState().setFocus('room')}>Sala</button>
           <button className="ghost" onClick={() => useDeck.getState().setFocus('window')}>Ventana</button>
           <button className="ghost" onClick={() => useDeck.getState().setFocus('chair')}>Sillón</button>
+          <button
+            className={`ghost toggle ${focus === 'free' ? 'toggle--on' : ''}`}
+            onClick={() => useDeck.getState().setFocus('free')}
+            title="Cámara libre: muévete por la habitación"
+          >
+            Libre
+          </button>
+          <button
+            className={`ghost toggle ${rain ? 'toggle--on' : ''}`}
+            onClick={useWeather.getState().toggleRain}
+            aria-pressed={rain}
+            title={rain ? 'Quitar la lluvia' : 'Que llueva'}
+          >
+            Lluvia
+          </button>
           <button className="ghost" onClick={fullscreen} title="Pantalla completa">⛶</button>
         </nav>
       </header>
+
+      {focus === 'free' && (
+        <p className="free-hint">
+          <kbd>W</kbd>
+          <kbd>A</kbd>
+          <kbd>S</kbd>
+          <kbd>D</kbd> moverte · arrastra para mirar · <kbd>Q</kbd>
+          <kbd>E</kbd> altura · <kbd>Mayús</kbd> rápido · <kbd>Esc</kbd> salir
+        </p>
+      )}
 
       <footer className="deck-bar">
         <span className={`status ${deviceId ? 'status--on' : ''}`}>{deviceId ? 'Conectado' : 'Conectando…'}</span>

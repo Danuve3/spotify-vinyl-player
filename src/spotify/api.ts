@@ -82,7 +82,8 @@ export async function getSavedAlbums(limit = 50): Promise<Album[]> {
 
 export async function searchAlbums(query: string): Promise<Album[]> {
   const q = encodeURIComponent(query)
-  const res = await request<any>(`/search?type=album&limit=12&q=${q}`)
+  // Development-mode apps may ask for at most 10 results per type (Feb 2026)
+  const res = await request<any>(`/search?type=album&limit=10&q=${q}`)
   return res.albums.items.map(toAlbum)
 }
 

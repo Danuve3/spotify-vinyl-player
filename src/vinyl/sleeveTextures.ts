@@ -4,6 +4,20 @@ import type { Side } from './sides'
 
 // Sleeve artwork: front = album cover, back = a printed tracklist by side.
 
+/**
+ * Laminated card finish for a printed sleeve face: a satin sheen, and the
+ * artwork lifts itself a little so covers stay vivid in the dim room.
+ */
+export function finishSleeve(mat: THREE.MeshStandardMaterial, map: THREE.Texture) {
+  mat.map = map
+  mat.color.set('#ffffff')
+  mat.roughness = 0.4
+  mat.emissive.set('#ffffff')
+  mat.emissiveMap = map
+  mat.emissiveIntensity = 0.16
+  mat.needsUpdate = true
+}
+
 const cache = new Map<string, THREE.Texture>()
 const loader = new THREE.TextureLoader().setCrossOrigin('anonymous')
 

@@ -9,7 +9,7 @@ import * as THREE from 'three'
 
 const ART_URL = `${import.meta.env.BASE_URL}art/`
 const WALL_Z = -0.3 // back wall, three.js coordinates
-const CENTRE_Y = 1.52
+const CENTRE_Y = 1.6
 const HEIGHT = 0.66
 const GAP = 0.13
 const DEPTH = 0.03 // canvas stretcher

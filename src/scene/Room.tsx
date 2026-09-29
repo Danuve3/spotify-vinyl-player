@@ -1,5 +1,5 @@
-import { Suspense, useEffect, useMemo } from 'react'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Suspense, useEffect, useMemo, useRef } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { AdaptiveDpr, Environment, Lightformer, PerformanceMonitor, useGLTF, useProgress } from '@react-three/drei'
 import { Bloom, EffectComposer, N8AO, Vignette } from '@react-three/postprocessing'
 import * as THREE from 'three'
@@ -8,8 +8,15 @@ import { Deck } from './Deck'
 import { Crate } from './Crate'
 import { CameraRig } from './CameraRig'
 import { useQuality } from './quality'
+import './specularAA'
 import { City } from './city/City'
 import { Paintings } from './Paintings'
+import { SleeveStand } from './SleeveStand'
+import { Speakers } from './Speakers'
+import { GlassReflection } from './GlassReflection'
+import { Rain } from './Rain'
+import { LampCord } from './LampCord'
+import { lampLevel, useLamp } from './lamp'
 
 // The living room: static geometry uses light baked in Blender (unlit
 // materials + lightmaps), while the deck and records are lit in real time
@@ -26,13 +33,45 @@ const TINTS: Record<string, { rgb: [number, number, number]; flat?: boolean }> =
 }
 const LIGHTMAP_URL = `${import.meta.env.BASE_URL}models/lightmaps/`
 
+// Baked surfaces carry two lightmaps, lamp on and lamp off (moon and city
+// only); the shader blends them with the lamp's level.
+function blendLampOff(mat: THREE.MeshBasicMaterial, off: THREE.Texture, offIntensity: number) {
+  mat.customProgramCacheKey = () => 'lamp-blend'
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.lightMapOff = { value: off }
+    shader.uniforms.lightMapOffIntensity = { value: offIntensity }
+    shader.uniforms.uLamp = lampLevel
+    shader.fragmentShader = shader.fragmentShader
+      .replace('void main() {', 'uniform sampler2D lightMapOff;\nuniform float lightMapOffIntensity;\nuniform float uLamp;\nvoid main() {')
+      .replace(
+        'reflectedLight.indirectDiffuse += lightMapTexel.rgb * lightMapIntensity * RECIPROCAL_PI;',
+        `vec3 lampOff = texture2D( lightMapOff, vLightMapUv ).rgb * lightMapOffIntensity;
+        reflectedLight.indirectDiffuse += mix( lampOff, lightMapTexel.rgb * lightMapIntensity, uLamp ) * RECIPROCAL_PI;`,
+      )
+  }
+}
+
 function StaticRoom() {
   const { scene } = useGLTF(ROOM_URL)
   const gl = useThree((s) => s.gl)
+  const glowing = useRef<{ mat: THREE.MeshStandardMaterial; base: number }[]>([])
 
   useEffect(() => {
     const loader = new THREE.TextureLoader()
     const lightmaps = new Map<string, THREE.Texture>()
+    const loadLightmap = (file: string) => {
+      let lm = lightmaps.get(file)
+      if (!lm) {
+        lm = loader.load(`${LIGHTMAP_URL}${file}`)
+        lm.channel = 1
+        lm.flipY = false
+        lm.colorSpace = THREE.SRGBColorSpace
+        lm.anisotropy = gl.capabilities.getMaxAnisotropy()
+        lightmaps.set(file, lm)
+      }
+      return lm
+    }
+    glowing.current = []
     scene.traverse((o) => {
       const mesh = o as THREE.Mesh
       if (!mesh.isMesh) return
@@ -42,6 +81,7 @@ function StaticRoom() {
       while (holder && holder.userData.lightmap === undefined) holder = holder.parent
       const baked = holder?.userData.lightmap as string | undefined
       const bakedScale = Number(holder?.userData.lightmap_scale ?? 1)
+      const offScale = holder?.userData.lightmap_off_scale as number | undefined
       const swap = (m: THREE.Material) => {
         const std = m as THREE.MeshStandardMaterial
         if (!baked) return m
@@ -53,15 +93,7 @@ function StaticRoom() {
           transparent: std.transparent,
           side: std.side,
         })
-        let lm = lightmaps.get(baked)
-        if (!lm) {
-          lm = loader.load(`${LIGHTMAP_URL}${baked.replace(/\.png$/, '.webp')}`)
-          lm.channel = 1
-          lm.flipY = false
-          lm.colorSpace = THREE.SRGBColorSpace
-          lm.anisotropy = gl.capabilities.getMaxAnisotropy()
-          lightmaps.set(baked, lm)
-        }
+        const lm = loadLightmap(baked.replace(/\.png$/, '.webp'))
         const tint = TINTS[std.name]
         if (tint) {
           basic.color.setRGB(...tint.rgb, THREE.LinearSRGBColorSpace)
@@ -69,6 +101,7 @@ function StaticRoom() {
         }
         basic.lightMap = lm
         basic.lightMapIntensity = bakedScale * Math.PI
+        if (offScale !== undefined) blendLampOff(basic, loadLightmap(baked.replace(/\.png$/, '_off.webp')), offScale * Math.PI)
         return basic
       }
       mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material)
@@ -90,19 +123,35 @@ function StaticRoom() {
       const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
       for (const m of mats) {
         const std = m as THREE.MeshStandardMaterial
-        if (std.emissive && std.emissiveIntensity > 0 && std.emissive.getHex() !== 0) std.toneMapped = false
+        if (std.emissive && std.emissiveIntensity > 0 && std.emissive.getHex() !== 0) {
+          std.toneMapped = false
+          // The lamp's shade and bulb follow the pull switch
+          if (/lamp|bulb/i.test(std.name)) glowing.current.push({ mat: std, base: std.emissiveIntensity })
+        }
       }
     })
   }, [scene, gl])
+
+  useFrame(() => {
+    for (const g of glowing.current) g.mat.emissiveIntensity = g.base * lampLevel.value
+  })
 
   return <primitive object={scene} />
 }
 
 function Lights({ shadows }: { shadows: boolean }) {
+  const lampOn = useLamp((s) => s.on)
+  const bulb = useRef<THREE.PointLight>(null)
+  useFrame((_, dt) => {
+    // A filament glows up (and dies down) in a few tens of milliseconds
+    lampLevel.value = THREE.MathUtils.damp(lampLevel.value, lampOn ? 1 : 0, lampOn ? 22 : 30, Math.min(dt, 0.05))
+    if (bulb.current) bulb.current.intensity = 6 * lampLevel.value
+  })
   return (
     <>
       {/* Lamp bulb (2700 K) — matches the baked light for dynamic objects */}
       <pointLight
+        ref={bulb}
         position={[-1.62, 1.45, 0.05]}
         intensity={6}
         distance={6}
@@ -117,9 +166,10 @@ function Lights({ shadows }: { shadows: boolean }) {
       <directionalLight position={[3.5, 1.8, 1.2]} intensity={0.3} color="#8fb0ff" />
       <ambientLight intensity={0.04} color="#ffd6a8" />
       {/* Reflections for the metal and vinyl: warm lamp blob + cool window */}
-      <Environment resolution={128} frames={1}>
+      {/* Re-rendered once whenever the lamp is switched */}
+      <Environment key={lampOn ? 'lamp-on' : 'lamp-off'} resolution={128} frames={1}>
         <color attach="background" args={['#0a0706']} />
-        <Lightformer form="circle" intensity={4} color="#ffb070" position={[-1.6, 1.5, 0]} scale={0.6} />
+        {lampOn && <Lightformer form="circle" intensity={4} color="#ffb070" position={[-1.6, 1.5, 0]} scale={0.6} />}
         <Lightformer form="rect" intensity={0.9} color="#8f8cb8" position={[2.3, 1.3, 1.55]} rotation-y={-Math.PI / 2} scale={[3.7, 2.6, 1]} />
         <Lightformer form="rect" intensity={0.15} color="#ffe2c0" position={[0, 2.6, 0.5]} rotation-x={Math.PI / 2} scale={[3, 3, 1]} />
       </Environment>
@@ -168,17 +218,22 @@ export function Room({ albums }: Props) {
         <CameraRig />
         <DevHandle />
         <Lights shadows={quality.shadows} />
-        <City />
         <Suspense fallback={null}>
           <StaticRoom />
           <Paintings />
+          <SleeveStand />
+          <Speakers />
+          <City />
+          <Rain />
+          <LampCord />
+          {quality.post && <GlassReflection />}
           <Deck />
           <Crate albums={albums} />
         </Suspense>
         {quality.post && (
           <EffectComposer multisampling={quality.msaa}>
             {quality.ao ? <N8AO aoRadius={0.3} intensity={1.5} distanceFalloff={0.5} halfRes /> : <></>}
-            <Bloom intensity={0.45} luminanceThreshold={0.9} luminanceSmoothing={0.2} mipmapBlur />
+            <Bloom intensity={0.45} luminanceThreshold={1.0} luminanceSmoothing={0.3} mipmapBlur />
             <Vignette offset={0.3} darkness={0.7} />
           </EffectComposer>
         )}

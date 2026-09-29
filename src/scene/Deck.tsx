@@ -5,8 +5,10 @@ import * as THREE from 'three'
 import { useDeck } from '../deck/store'
 import { measureArm, radiusAtYaw, yawForRadius, type ArmGeometry } from '../deck/tonearm'
 import { circularAnisotropyMap, createSideTextures } from '../vinyl/textures'
-import { backCoverTexture, coverTexture } from '../vinyl/sleeveTextures'
+import { backCoverTexture, coverTexture, finishSleeve } from '../vinyl/sleeveTextures'
 import { brushedLinearMaps } from './brushed'
+import { STAND_SLEEVE, standDirection } from './SleeveStand'
+import { deckAudio } from '../audio/deckAudio'
 
 // The PS 500 rig: loads the Blender model and animates it towards the state
 // in the deck store. All motion is damped so it feels mechanical, not snappy.
@@ -22,7 +24,25 @@ const R_DISC = 0.1524
 
 const damp = THREE.MathUtils.damp
 
+// Taking the record out of its sleeve, at hand speed
+const SLIDE_DISTANCE = 0.32 // a diameter plus a little
+const SLIDE_OUT_S = 1.3
+const SLIDE_IN_S = 1.1
+type SleevePhase = 'in' | 'sliding-out' | 'lifting' | 'free' | 'returning' | 'aligning' | 'sliding-in'
+
 type Nodes = Record<string, THREE.Object3D>
+
+interface Poses {
+  holder: THREE.Group
+  onPlatterLocal: THREE.Matrix4
+  inSleeve: THREE.Vector3
+  inSleeveQ: THREE.Quaternion
+  /** Fully slid out through the open edge, still in the sleeve's plane. */
+  slidOut: THREE.Vector3
+  /** Lifted clear of the sleeve and the plinth. */
+  lifted: THREE.Vector3
+  vinylBottomY: number
+}
 
 function byName(root: THREE.Object3D): Nodes {
   const out: Nodes = {}
@@ -92,7 +112,7 @@ export function Deck() {
   const poses = useMemo(() => {
     // Idempotent: StrictMode runs memos twice and the vinyl can only have one holder
     const cached = recordGltf.scene.userData.poses
-    if (cached) return cached as { holder: THREE.Group; onPlatterLocal: THREE.Matrix4; inSleeve: THREE.Vector3; vinylBottomY: number }
+    if (cached) return cached as Poses
     const vinyl = r.Vinyl
     const sleeve = r.Sleeve
     vinyl.updateWorldMatrix(true, false)
@@ -109,10 +129,28 @@ export function Deck() {
     vinyl.position.set(0, -0.0009, 0)
     vinyl.rotation.set(0, 0, 0)
 
-    const inSleeve = sleeve.getWorldPosition(new THREE.Vector3())
+    // The sleeve (and its inner paper) stands upright on the "now playing" stand
+    const stand = new THREE.Group()
+    stand.position.copy(STAND_SLEEVE.position)
+    stand.rotation.copy(STAND_SLEEVE.rotation)
+    recordGltf.scene.add(stand)
+    const sleeveCentre = sleeve.position.clone()
+    for (const part of [sleeve, r.Inner_Sleeve]) {
+      part.position.sub(sleeveCentre)
+      stand.add(part)
+    }
+    stand.updateMatrixWorld(true)
+
+    const inSleeve = stand.position.clone()
+    const inSleeveQ = stand.quaternion.clone()
+    // Out through the open edge (+X along the groove, towards the deck) until it
+    // clears the sleeve, then up over the plinth
+    const slidOut = inSleeve.clone().add(standDirection(SLIDE_DISTANCE, 0, 0))
+    const lifted = slidOut.clone().add(new THREE.Vector3(0.05, 0.2, 0.09))
     holder.position.copy(inSleeve)
-    holder.userData.inSleeve = true
-    const result = { holder, onPlatterLocal, inSleeve, vinylBottomY }
+    holder.quaternion.copy(inSleeveQ)
+    holder.userData.phase = 'in'
+    const result: Poses = { holder, onPlatterLocal, inSleeve, inSleeveQ, slidOut, lifted, vinylBottomY }
     recordGltf.scene.userData.poses = result
     return result
   }, [r, n, recordGltf.scene])
@@ -132,7 +170,7 @@ export function Deck() {
     upgrade(root, 'PS500_Deck', { anisotropy: 0.6, roughnessMap: linear.roughness, normalMap: linear.normal, normalScale: new THREE.Vector2(0.15, 0.15) })
     upgrade(root, 'PS500_Platter', { anisotropy: 0.85, anisotropyMap: circular })
     upgrade(root, 'Alu_Satin', { anisotropy: 0.5, anisotropyMap: circular })
-    upgrade(root, 'PS500_Plinth', { clearcoat: 0.6, clearcoatRoughness: 0.15 })
+    upgrade(root, 'PS500_Plinth', { clearcoat: 0.6, clearcoatRoughness: 0.22 })
     upgrade(root, 'Acrylic_Smoked', {
       transmission: 1,
       thickness: 0.004,
@@ -144,7 +182,7 @@ export function Deck() {
       metalness: 0,
     })
     for (const m of materialsNamed(root, 'Chrome')) {
-      m.roughness = 0.08
+      m.roughness = 0.12
       m.metalness = 1
     }
     // Physical arm geometry measured in the deck's own space
@@ -174,13 +212,9 @@ export function Deck() {
     const [front] = materialsNamed(recordGltf.scene, 'Sleeve_Front')
     const [back] = materialsNamed(recordGltf.scene, 'Sleeve_Back')
     if (!album) return
-    front.map = coverTexture(album.coverUrl)
-    front.color.set('#ffffff')
-    front.needsUpdate = true
+    finishSleeve(front, coverTexture(album.coverUrl))
     const backTex = backCoverTexture(album, sides)
-    back.map = backTex
-    back.color.set('#ffffff')
-    back.needsUpdate = true
+    finishSleeve(back, backTex)
     return () => backTex.dispose()
   }, [album, sides, recordGltf.scene])
 
@@ -330,23 +364,83 @@ export function Deck() {
       tmp.q.setFromEuler(tmp.e.set(Math.PI / 2 - 0.5, Math.atan2(toCam.x, toCam.z), 0, 'YXZ'))
     } else {
       tmp.pos.copy(poses.inSleeve)
-      tmp.q.identity()
+      tmp.q.copy(poses.inSleeveQ)
     }
     tmp.q2.setFromAxisAngle(new THREE.Vector3(0, 0, 1), v.flip)
     tmp.q.multiply(tmp.q2)
 
-    const slidingOut = st.vinyl !== 'sleeve' && holder.userData.inSleeve
-    if (slidingOut) {
-      // First slide the record out of the open edge of the sleeve
-      const out = poses.inSleeve.clone().add(new THREE.Vector3(0.24, 0.12, 0))
-      holder.position.lerp(out, 1 - Math.exp(-6 * dt))
-      if (holder.position.distanceTo(out) < 0.01) holder.userData.inSleeve = false
-    } else {
-      const rate = st.vinyl === 'platter' && holder.userData.seated ? 1000 : 5
-      holder.position.lerp(tmp.pos, 1 - Math.exp(-rate * dt))
-      holder.quaternion.slerp(tmp.q, 1 - Math.exp(-rate * dt))
-      holder.userData.seated = st.vinyl === 'platter' && holder.position.distanceTo(tmp.pos) < 0.0005
-      if (st.vinyl === 'sleeve' && holder.position.distanceTo(tmp.pos) < 0.002) holder.userData.inSleeve = true
+    // The record goes in and out of the sleeve physically: it slides along the
+    // groove at hand speed (with sound), and only then is lifted or put away.
+    const ud = holder.userData as { phase: SleevePhase; slide: number; seated?: boolean }
+    const wantSleeve = st.vinyl === 'sleeve'
+    const approach = (target: THREE.Vector3, q: THREE.Quaternion, rate: number) => {
+      holder.position.lerp(target, 1 - Math.exp(-rate * dt))
+      holder.quaternion.slerp(q, 1 - Math.exp(-rate * dt))
+      return holder.position.distanceTo(target) < 0.006
+    }
+    const placeOnSlide = () => {
+      const e = ud.slide * ud.slide * (3 - 2 * ud.slide)
+      holder.position.lerpVectors(poses.inSleeve, poses.slidOut, e)
+      holder.quaternion.copy(poses.inSleeveQ)
+    }
+    switch (ud.phase) {
+      case 'in':
+        holder.position.copy(poses.inSleeve)
+        holder.quaternion.copy(poses.inSleeveQ)
+        if (!wantSleeve) {
+          ud.phase = 'sliding-out'
+          ud.slide = 0
+          deckAudio().sleeveSlide(SLIDE_OUT_S)
+        }
+        break
+      case 'sliding-out':
+        ud.slide = Math.min(1, ud.slide + dt / SLIDE_OUT_S)
+        placeOnSlide()
+        if (wantSleeve) {
+          ud.phase = 'sliding-in'
+          deckAudio().sleeveSlide(SLIDE_IN_S * ud.slide, true)
+        } else if (ud.slide >= 1) ud.phase = 'lifting'
+        break
+      case 'lifting':
+        if (approach(poses.lifted, poses.inSleeveQ, 7)) {
+          ud.phase = 'free'
+          // The camera follows the record to the deck once it is out
+          if (st.focus !== 'deck' && st.focus !== 'free') st.setFocus('deck')
+        }
+        break
+      case 'free':
+        if (wantSleeve) {
+          ud.phase = 'returning'
+          break
+        }
+        {
+          const rate = st.vinyl === 'platter' && ud.seated ? 1000 : 5
+          holder.position.lerp(tmp.pos, 1 - Math.exp(-rate * dt))
+          holder.quaternion.slerp(tmp.q, 1 - Math.exp(-rate * dt))
+          ud.seated = st.vinyl === 'platter' && holder.position.distanceTo(tmp.pos) < 0.0005
+        }
+        break
+      case 'returning':
+        // Up and over, lined up with the open edge
+        if (!wantSleeve) ud.phase = 'free'
+        else if (approach(poses.lifted, poses.inSleeveQ, 6)) ud.phase = 'aligning'
+        break
+      case 'aligning':
+        if (!wantSleeve) ud.phase = 'free'
+        else if (approach(poses.slidOut, poses.inSleeveQ, 8)) {
+          ud.phase = 'sliding-in'
+          ud.slide = 1
+          deckAudio().sleeveSlide(SLIDE_IN_S, true)
+        }
+        break
+      case 'sliding-in':
+        ud.slide = Math.max(0, ud.slide - dt / SLIDE_IN_S)
+        placeOnSlide()
+        if (!wantSleeve) {
+          ud.phase = 'sliding-out'
+          deckAudio().sleeveSlide(SLIDE_OUT_S * (1 - ud.slide))
+        } else if (ud.slide <= 0) ud.phase = 'in'
+        break
     }
   })
 
@@ -410,8 +504,9 @@ export function Deck() {
     }
   }
 
+  // A newly picked album starts with its record in the sleeve
   useEffect(() => {
-    poses.holder.userData.inSleeve = true
+    poses.holder.userData.phase = 'in'
   }, [poses, album])
 
   return (

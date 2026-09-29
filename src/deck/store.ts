@@ -13,7 +13,7 @@ export type ArmState =
   | 'down' // stylus in the groove
   | 'auto-in' // automatic cueing to the lead-in
   | 'auto-return' // automatic return to the rest
-export type Focus = 'room' | 'crate' | 'deck' | 'window' | 'chair'
+export type Focus = 'room' | 'crate' | 'deck' | 'window' | 'chair' | 'free'
 
 interface DeckState {
   focus: Focus
@@ -102,7 +102,8 @@ export const useDeck = create<DeckState>((set, get) => ({
     }
     if (vinyl === 'platter' && !get().lidOpen) return set({ message: 'Abre la tapa' })
     deckAudio().resume()
-    set({ vinyl: 'hand', focus: 'deck', message: null })
+    // From the sleeve the camera waits for the record to come out (see Deck)
+    set({ vinyl: 'hand', message: null, ...(vinyl === 'sleeve' ? {} : { focus: 'deck' as const }) })
   },
 
   flipVinyl: () => {

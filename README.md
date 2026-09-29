@@ -55,11 +55,15 @@ El workflow `Deploy to GitHub Pages` también se puede lanzar a mano desde la pe
 - `src/vinyl/` — reparto en caras, mapa surco ↔ canción y texturas generadas (surcos, etiqueta, funda).
 - `src/audio/` — crackle, motor, aguja y surco final sintetizados con Web Audio.
 - `src/scene/` — escena React Three Fiber, cámara sentada y calidad adaptativa.
-- `src/scene/city/` — skyline nocturno procedural (edificios, tráfico, río, cielo) visto desde la cristalera.
+- `src/scene/city/` — vista nocturna de Manhattan desde la cristalera: panorámica real, cielo procedural (luna, nubes, estrellas) y luces animadas.
 
 ## Créditos
 
 Modelos y texturas de la habitación de [Poly Haven](https://polyhaven.com) (CC0): *Modern Wooden Cabinet* (Patrik Pangerl), *Modern Arm Chair 01* (Vibrant Nordic), *Potted Plant 02* (Rico Cilliers), *Herringbone Parquet*, *Plastered Wall 04*, *Wool Boucle*, *Oak Veneer 02*.
+
+Vista de la ciudad: [*Manhattan at night south of Rockefeller Center panorama*](https://commons.wikimedia.org/wiki/File:Manhattan_at_night_south_of_Rockefeller_Center_panorama_(11256p).jpg), de Rhododendrites, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); redimensionada a 4096 px (`public/city/manhattan-night.webp`), que se distribuye bajo la misma licencia.
+
+Altavoces: modelo inspirado en los Bang & Olufsen BeoLab 18; proyecto personal sin relación con Bang & Olufsen.
 
 Cuadros: retratos de Kurt Cobain, Amy Winehouse y David Bowie de sus respectivos autores, usados como decoración en un proyecto personal.
 

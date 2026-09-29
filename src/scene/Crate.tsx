@@ -4,7 +4,7 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Album } from '../spotify/api'
 import { useDeck } from '../deck/store'
-import { coverTexture } from '../vinyl/sleeveTextures'
+import { coverTexture, finishSleeve } from '../vinyl/sleeveTextures'
 
 // Records standing in the teak crate. Scroll flips through them; the record
 // under the pointer rises a little; clicking takes it to the deck.
@@ -48,13 +48,13 @@ export function Crate({ albums }: Props) {
         const mat = mesh.material as THREE.MeshStandardMaterial
         if (mat.name === 'Sleeve_Front') {
           const front = mat.clone()
-          front.map = coverTexture(album.coverUrl)
-          front.color.set('#ffffff')
+          finishSleeve(front, coverTexture(album.coverUrl))
           mesh.material = front
         }
       })
       clone.position.set(0, 0, 0)
       clone.rotation.set(0, 0, 0)
+      clone.visible = true // the deck hides the template while no album is picked
       return { album, object: clone }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
