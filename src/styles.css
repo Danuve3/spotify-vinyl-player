@@ -41,27 +41,181 @@ button.ghost {
 }
 
 .gate {
-  height: 100%;
+  position: relative;
+  min-height: 100%;
   display: grid;
   place-content: center;
   justify-items: center;
   gap: 1rem;
-  padding: 16px;
+  padding: 32px 16px 56px;
   text-align: center;
-  background: radial-gradient(circle at 50% 40%, #3a2415, var(--wood) 70%);
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 32%, rgba(232, 154, 60, 0.16), transparent 70%),
+    radial-gradient(circle at 50% 40%, #2e1c11, var(--wood) 72%);
+}
+
+/* Film grain, very faint */
+.gate::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  z-index: -1;
+  opacity: 0.07;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  pointer-events: none;
+}
+
+.gate > * {
+  animation: gate-in 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.gate > :nth-child(2) { animation-delay: 0.12s; }
+.gate > :nth-child(3) { animation-delay: 0.2s; }
+.gate > :nth-child(4) { animation-delay: 0.28s; }
+.gate > :nth-child(n + 5) { animation-delay: 0.36s; }
+
+@keyframes gate-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
 }
 
 .gate h1 {
   font-family: var(--display);
   font-weight: 600;
   font-size: clamp(2.5rem, 8vw, 5rem);
-  margin: 0;
+  margin: 0.4rem 0 0;
   letter-spacing: -0.02em;
 }
 
 .gate p {
   color: var(--ink-dim);
   margin: 0 0 1rem;
+}
+
+.gate-note {
+  position: absolute;
+  bottom: 20px;
+  left: 0;
+  right: 0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  opacity: 0.6;
+}
+
+/* --- The record on the home page (pure CSS) --- */
+.gate-deck {
+  --size: clamp(210px, 42vmin, 340px);
+  position: relative;
+  width: var(--size);
+  height: var(--size);
+}
+
+.gate-record {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background:
+    /* grooves */
+    repeating-radial-gradient(circle, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 3px),
+    /* lead-out and edge bands */
+    radial-gradient(circle, transparent 33%, rgba(0, 0, 0, 0.55) 33.4% 35%, transparent 35.4% 96%, rgba(255, 255, 255, 0.06) 97%),
+    #0d0b0a;
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.55),
+    0 0 0 1px rgba(255, 255, 255, 0.04);
+  animation: gate-spin 1.8s linear infinite;
+}
+
+/* Two soft highlights that stay put while the record turns beneath them */
+.gate-deck::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 20deg,
+    transparent 0 8%,
+    rgba(255, 214, 160, 0.13) 12%,
+    transparent 17% 58%,
+    rgba(255, 214, 160, 0.09) 62%,
+    transparent 67%
+  );
+  mask: radial-gradient(circle, transparent 32%, #000 33%);
+  pointer-events: none;
+}
+
+.gate-label {
+  width: 33%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  display: grid;
+  place-content: center;
+  gap: 2px;
+  background:
+    radial-gradient(circle, var(--wood) 0 4.5%, transparent 5%),
+    radial-gradient(circle at 35% 30%, #f0ac55, var(--amber) 60%, #c47a28);
+  color: var(--wood);
+}
+
+.gate-label-title {
+  font-family: var(--display);
+  font-size: calc(var(--size) * 0.042);
+  font-weight: 600;
+  transform: translateY(-120%);
+}
+
+.gate-label-side {
+  font-size: calc(var(--size) * 0.028);
+  letter-spacing: 0.1em;
+  transform: translateY(160%);
+}
+
+@keyframes gate-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* A slim tonearm resting in the groove */
+.gate-arm {
+  position: absolute;
+  top: -4%;
+  right: -9%;
+  width: 36%;
+  overflow: visible;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.5));
+}
+.gate-arm-base {
+  fill: #2a211a;
+  stroke: rgba(243, 231, 211, 0.18);
+}
+.gate-arm-pivot {
+  fill: #b9bcbf;
+}
+.gate-arm-tube {
+  fill: none;
+  stroke: #c9ccd0;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+}
+.gate-arm-head {
+  fill: #1e1916;
+  stroke: #c9ccd0;
+  stroke-width: 1.5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-record,
+  .gate > * {
+    animation: none;
+  }
 }
 
 .error,

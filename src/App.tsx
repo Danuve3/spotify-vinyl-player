@@ -97,10 +97,25 @@ export default function App() {
   if (!loggedIn) {
     return (
       <main className="gate">
+        <div className="gate-deck" aria-hidden="true">
+          <div className="gate-record">
+            <div className="gate-label">
+              <span className="gate-label-title">Vinyl Room</span>
+              <span className="gate-label-side">A · 33⅓</span>
+            </div>
+          </div>
+          <svg className="gate-arm" viewBox="0 0 120 220">
+            <circle cx="96" cy="22" r="13" className="gate-arm-base" />
+            <circle cx="96" cy="22" r="4" className="gate-arm-pivot" />
+            <path d="M96 22 L92 150 Q91 168 78 182" className="gate-arm-tube" />
+            <rect x="64" y="176" width="22" height="12" rx="2" transform="rotate(-38 75 182)" className="gate-arm-head" />
+          </svg>
+        </div>
         <h1>Vinyl Room</h1>
         <p>Un tocadiscos, una habitación tranquila y tu colección de Spotify.</p>
         <button onClick={() => login().catch((e: Error) => setError(e.message))}>Entrar con Spotify</button>
         {error && <p className="error">{error}</p>}
+        <small className="gate-note">Necesita Spotify Premium · acceso por invitación</small>
       </main>
     )
   }
