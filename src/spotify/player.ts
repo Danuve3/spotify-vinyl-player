@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { getAccessToken } from './auth'
-import { transferPlayback } from './api'
+import { play, transferPlayback } from './api'
+import type { PlaybackSource } from '../deck/source'
 
 const SDK_URL = 'https://sdk.scdn.co/spotify-player.js'
 
@@ -83,4 +84,22 @@ export function useSpotifyPlayer(enabled: boolean) {
   }, [enabled])
 
   return { player: playerRef, deviceId, snapshot, error }
+}
+
+/** Spotify as the deck's music source. */
+export function useSpotifySource(enabled: boolean): PlaybackSource {
+  const { player, deviceId, snapshot, error } = useSpotifyPlayer(enabled)
+  return useMemo(
+    () => ({
+      ready: !!deviceId,
+      snapshot,
+      error,
+      ownSurfaceNoise: false,
+      play: (albumUri: string, trackUri: string, positionMs: number) =>
+        deviceId ? play(deviceId, albumUri, trackUri, positionMs) : Promise.resolve(),
+      pause: () => void player.current?.pause(),
+      unlock: () => void player.current?.activateElement(),
+    }),
+    [player, deviceId, snapshot, error],
+  )
 }

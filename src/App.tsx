@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { handleCallback, isCallback, isLoggedIn, login, logout } from './spotify/auth'
 import { getSavedAlbums, type Album } from './spotify/api'
-import { useSpotifyPlayer } from './spotify/player'
+import { useSpotifySource } from './spotify/player'
+import { useDemoPlayer } from './demo/player'
+import { demoAlbums } from './demo/great78'
 import { usePlayback } from './deck/usePlayback'
 import { currentSide, useDeck } from './deck/store'
 import { spotAt } from './vinyl/sides'
@@ -59,15 +61,42 @@ function NowPlaying() {
   )
 }
 
-// Dev-only: explore the room without logging in (?preview)
+// Dev-only: straight into the room with the demo records (?preview)
 const PREVIEW = import.meta.env.DEV && new URLSearchParams(window.location.search).has('preview')
 
+// Where the music comes from: Spotify, or the demo records (no account)
+type Mode = 'spotify' | 'demo' | null
+const MODE_KEY = 'vinyl-room:mode'
+
+function initialMode(): Mode {
+  if (PREVIEW) return 'demo'
+  if (!isCallback() && isLoggedIn()) return 'spotify'
+  try {
+    return localStorage.getItem(MODE_KEY) === 'demo' ? 'demo' : null
+  } catch {
+    return null
+  }
+}
+
+function rememberMode(mode: Mode) {
+  try {
+    if (mode === 'demo') localStorage.setItem(MODE_KEY, 'demo')
+    else localStorage.removeItem(MODE_KEY)
+  } catch {
+    // private mode: the choice just isn't remembered
+  }
+}
+
 export default function App() {
-  const [loggedIn, setLoggedIn] = useState(() => PREVIEW || (!isCallback() && isLoggedIn()))
+  const [mode, setMode] = useState<Mode>(initialMode)
   const [error, setError] = useState<string | null>(null)
   const [albums, setAlbums] = useState<Album[]>([])
-  const { player, deviceId, snapshot, error: playerError } = useSpotifyPlayer(loggedIn && !PREVIEW)
-  usePlayback(player, deviceId, snapshot)
+  const spotify = useSpotifySource(mode === 'spotify')
+  const demo = useDemoPlayer(mode === 'demo')
+  const source = mode === 'demo' ? demo : spotify
+  usePlayback(source)
+  const playerError = source.error
+  const deviceId = source.ready
 
   const hint = useHint()
   const message = useDeck((s) => s.message)
@@ -84,20 +113,17 @@ export default function App() {
   useEffect(() => {
     if (!isCallback()) return
     handleCallback()
-      .then(() => setLoggedIn(true))
+      .then(() => setMode('spotify'))
       .catch((e: Error) => setError(e.message))
   }, [])
 
   useEffect(() => {
-    if (!loggedIn) return
-    if (PREVIEW) {
-      void import('./dev/demo').then((m) => setAlbums(m.demoAlbums()))
-      return
-    }
+    if (mode === 'demo') return setAlbums(demoAlbums())
+    if (mode !== 'spotify') return setAlbums([])
     getSavedAlbums()
       .then(setAlbums)
       .catch((e: Error) => setError(e.message))
-  }, [loggedIn])
+  }, [mode])
 
   // Messages from the deck fade after a moment
   useEffect(() => {
@@ -106,17 +132,24 @@ export default function App() {
     return () => clearTimeout(t)
   }, [message])
 
-  // Browsers only allow audio after a gesture: unlock Spotify and Web Audio on the first click
+  // Browsers only allow audio after a gesture: unlock the player and Web Audio on the first click
   useEffect(() => {
     const unlock = () => {
       deckAudio().resume()
-      void player.current?.activateElement()
+      source.unlock()
     }
     window.addEventListener('pointerdown', unlock, { once: true })
     return () => window.removeEventListener('pointerdown', unlock)
-  }, [player, deviceId])
+  }, [source])
 
-  if (!loggedIn) {
+  const leave = () => {
+    useDeck.getState().reset()
+    if (mode === 'spotify') logout()
+    rememberMode(null)
+    setMode(null)
+  }
+
+  if (!mode) {
     return (
       <main className="gate">
         <div className="gate-deck" aria-hidden="true">
@@ -134,10 +167,24 @@ export default function App() {
           </svg>
         </div>
         <h1>Vinyl Room</h1>
-        <p>Un tocadiscos, una habitación tranquila y tu colección de Spotify.</p>
-        <button onClick={() => login().catch((e: Error) => setError(e.message))}>Entrar con Spotify</button>
+        <p>Un tocadiscos, una habitación tranquila y tus discos: los de Spotify o unos de hace cien años.</p>
+        <div className="gate-actions">
+          <button onClick={() => login().catch((e: Error) => setError(e.message))}>Entrar con Spotify</button>
+          <button
+            className="ghost"
+            onClick={() => {
+              rememberMode('demo')
+              setMode('demo')
+            }}
+          >
+            Escuchar discos de demo
+          </button>
+        </div>
         {error && <p className="error">{error}</p>}
-        <small className="gate-note">Necesita Spotify Premium · acceso por invitación</small>
+        <small className="gate-note">
+          Spotify necesita Premium y acceso por invitación · Los discos de demo son grabaciones de 78 rpm de 1906 a 1925
+          del Great 78 Project (Internet Archive), sin cuenta
+        </small>
       </main>
     )
   }
@@ -150,7 +197,7 @@ export default function App() {
       <Room albums={albums} />
 
       <header className="hud-top">
-        <Search onAdd={(a) => setAlbums((list) => [a, ...list.filter((x) => x.id !== a.id)])} />
+        {mode === 'spotify' && <Search onAdd={(a) => setAlbums((list) => [a, ...list.filter((x) => x.id !== a.id)])} />}
         <nav className="views">
           <button className="ghost" onClick={() => useDeck.getState().setFocus('crate')}>Discos</button>
           <button className="ghost" onClick={() => useDeck.getState().setFocus('deck')}>Tocadiscos</button>
@@ -209,7 +256,9 @@ export default function App() {
       )}
 
       <footer className="deck-bar">
-        <span className={`status ${deviceId ? 'status--on' : ''}`}>{deviceId ? 'Conectado' : 'Conectando…'}</span>
+        <span className={`status ${deviceId ? 'status--on' : ''}`}>
+          {mode === 'demo' ? 'Discos de demo' : deviceId ? 'Conectado' : 'Conectando…'}
+        </span>
         <NowPlaying />
         {!album || vinyl !== 'hand' ? null : (
           <>
@@ -222,7 +271,7 @@ export default function App() {
             Devolver a la caja
           </button>
         )}
-        <button className="ghost" onClick={() => (logout(), setLoggedIn(false))}>Salir</button>
+        <button className="ghost" onClick={leave}>Salir</button>
       </footer>
 
       <CrateCaption />

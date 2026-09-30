@@ -95,6 +95,22 @@ button.ghost {
   margin: 0 0 1rem;
 }
 
+.gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px;
+}
+
+.gate-actions button.ghost {
+  color: var(--ink);
+  border-color: color-mix(in srgb, var(--amber) 55%, transparent);
+}
+
+.gate-actions button.ghost:hover {
+  background: color-mix(in srgb, var(--amber) 12%, transparent);
+}
+
 .gate-note {
   position: absolute;
   bottom: 20px;
@@ -105,6 +121,8 @@ button.ghost {
   text-transform: uppercase;
   color: var(--ink-dim);
   opacity: 0.6;
+  padding: 0 16px;
+  line-height: 1.6;
 }
 
 /* --- The record on the home page (pure CSS) --- */

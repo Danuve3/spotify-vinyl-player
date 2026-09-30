@@ -17,6 +17,7 @@ export class DeckAudio {
   private ctx: AudioContext
   private master: GainNode
   private surface: GainNode // groove noise + crackle, only while the stylus is down
+  private noise: GainNode // crackle and hiss (not the rumble): off for records that bring their own
   private motor: GainNode
   private runOutTimer: number | null = null
   private hiss: AudioBuffer
@@ -32,8 +33,10 @@ export class DeckAudio {
     this.surface = this.ctx.createGain()
     this.surface.gain.value = 0
     this.surface.connect(this.master)
+    this.noise = this.ctx.createGain()
+    this.noise.connect(this.surface)
     void this.loadCrackle()
-    this.loop(this.hiss, this.surface, 0.018, { type: 'bandpass', freq: 5000, q: 0.4 })
+    this.loop(this.hiss, this.noise, 0.018, { type: 'bandpass', freq: 5000, q: 0.4 })
     // Low groove rumble modulated at the rotation rate
     const rumble = this.loop(this.hiss, this.surface, 0.05, { type: 'lowpass', freq: 90 })
     const wow = this.ctx.createOscillator()
@@ -70,7 +73,7 @@ export class DeckAudio {
       src.loopEnd = buffer.duration - 0.05
       const gain = this.ctx.createGain()
       gain.gain.value = CRACKLE_LEVEL
-      src.connect(gain).connect(this.surface)
+      src.connect(gain).connect(this.noise)
       src.start(0, 0.05 + Math.random() * (buffer.duration - 0.2))
     } catch {
       // No crackle then; the groove hiss and rumble still play
@@ -103,6 +106,11 @@ export class DeckAudio {
 
   setMotor(on: boolean) {
     this.motor.gain.setTargetAtTime(on ? 1 : 0, this.ctx.currentTime, on ? 0.6 : 1.2)
+  }
+
+  /** Our crackle and hiss on or off (old 78s already carry their own). */
+  setSurfaceNoise(on: boolean) {
+    this.noise.gain.setTargetAtTime(on ? 1 : 0, this.ctx.currentTime, 0.05)
   }
 
   /** Stylus in the groove: surface noise on/off. */

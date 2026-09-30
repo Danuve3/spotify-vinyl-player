@@ -1,0 +1,350 @@
+[
+ {
+  "id": "g78-hot-jazz",
+  "name": "Hot Jazz",
+  "artist": "Varios · 1922–1924",
+  "year": "1924",
+  "cover": "demo/g78-hot-jazz.webp",
+  "sides": [
+   {
+    "identifier": "78_orys-creole-trombone_kid-orys-sunshine-orchestra-papa-mutt-carey-kid-ory-dink-joh_gbia0215087a",
+    "name": "Ory's Creole Trombone",
+    "artist": "Kid Ory's Sunshine Orchestra",
+    "year": "1922",
+    "durationMs": 202990,
+    "url": "https://archive.org/download/78_orys-creole-trombone_kid-orys-sunshine-orchestra-papa-mutt-carey-kid-ory-dink-joh_gbia0215087a/ORY%27S%20CREOLE%20TROMBONE%20-%20KID%20ORY%27S%20SUNSHINE%20ORCHESTRA.mp3"
+   },
+   {
+    "identifier": "78_society-blues_kid-orys-sunshine-orchestra-papa-mutt-carey-kid-ory-dink-johnson-fre_gbia0215087b",
+    "name": "Society Blues",
+    "artist": "Kid Ory's Sunshine Orchestra",
+    "year": "1922",
+    "durationMs": 192340,
+    "url": "https://archive.org/download/78_society-blues_kid-orys-sunshine-orchestra-papa-mutt-carey-kid-ory-dink-johnson-fre_gbia0215087b/SOCIETY%20BLUES%20-%20KID%20ORY%27S%20SUNSHINE%20ORCHESTRA.mp3"
+   },
+   {
+    "identifier": "78_tears_king-olivers-jazz-band-hardin-armstrong-joe-oliver-louis-armstrong-johnny-do_gbia0001053a",
+    "name": "Tears",
+    "artist": "King Oliver's Jazz Band",
+    "year": "1923",
+    "durationMs": 199000,
+    "url": "https://archive.org/download/78_tears_king-olivers-jazz-band-hardin-armstrong-joe-oliver-louis-armstrong-johnny-do_gbia0001053a/Tears%20-%20King%20Oliver%27s%20Jazz%20Band%20-%20Hardin.mp3"
+   },
+   {
+    "identifier": "78_tin-root-blues_new-orleans-rhythm-kings_gbia0243728a",
+    "name": "Tin Root Blues",
+    "artist": "New Orleans Rhythm Kings",
+    "year": "1923",
+    "durationMs": 180890,
+    "url": "https://archive.org/download/78_tin-root-blues_new-orleans-rhythm-kings_gbia0243728a/Tin%20Root%20Blues%20-%20New%20Orleans%20Rhythm%20Kings.mp3"
+   },
+   {
+    "identifier": "78_da-da-strain_new-orleans-rhythm-kings-medina-dowell_gbia0469871b",
+    "name": "Da Da Strain",
+    "artist": "New Orleans Rhythm Kings",
+    "year": "1923",
+    "durationMs": 152260,
+    "url": "https://archive.org/download/78_da-da-strain_new-orleans-rhythm-kings-medina-dowell_gbia0469871b/Da%20Da%20Strain%20-%20New%20Orleans%20Rhythm%20Kings%20-%20Medina.mp3"
+   },
+   {
+    "identifier": "78_riverbeat-shuffle_wolverine-orchestra-carmichael_gbia0009181a",
+    "name": "Riverboat Shuffle",
+    "artist": "Wolverine Orchestra",
+    "year": "1924",
+    "durationMs": 160000,
+    "url": "https://archive.org/download/78_riverbeat-shuffle_wolverine-orchestra-carmichael_gbia0009181a/Riverbeat%20Shuffle%20-%20Wolverine%20Orchestra%20-%20Carmichael.mp3"
+   },
+   {
+    "identifier": "78_copenhagen_wolverine-orchestra-davis_gbia0009180b",
+    "name": "Copenhagen",
+    "artist": "Wolverine Orchestra",
+    "year": "1924",
+    "durationMs": 157000,
+    "url": "https://archive.org/download/78_copenhagen_wolverine-orchestra-davis_gbia0009180b/Copenhagen%20-%20Wolverine%20Orchestra%20-%20Davis.mp3"
+   },
+   {
+    "identifier": "78_bees-knees_the-original-memphis-five-lopez-and-lewis_gbia0278930a",
+    "name": "Bee's Knees",
+    "artist": "The Original Memphis Five",
+    "year": "1922",
+    "durationMs": 197710,
+    "url": "https://archive.org/download/78_bees-knees_the-original-memphis-five-lopez-and-lewis_gbia0278930a/BEE%27S%20KNEES%20-%20The%20Original%20Memphis%20Five%20-%20Lopez%20and%20Lewis.mp3"
+   },
+   {
+    "identifier": "78_aunt-hagers-blues_original-memphis-five-handy_gbia0101523b",
+    "name": "Aunt Hager's Blues",
+    "artist": "Original Memphis Five",
+    "year": "1923",
+    "durationMs": 186000,
+    "url": "https://archive.org/download/78_aunt-hagers-blues_original-memphis-five-handy_gbia0101523b/Aunt%20Hager%27s%20Blues%20-%20Original%20Memphis%20Five.mp3"
+   },
+   {
+    "identifier": "78_shake-your-feet_original-memphis-five-gene-buck-dave-stamper_gbia0101462a",
+    "name": "Shake Your Feet",
+    "artist": "Original Memphis Five",
+    "year": "1923",
+    "durationMs": 191000,
+    "url": "https://archive.org/download/78_shake-your-feet_original-memphis-five-gene-buck-dave-stamper_gbia0101462a/Shake%20Your%20Feet%20-%20Original%20Memphis%20Five%20-%20Gene%20Buck.mp3"
+   }
+  ]
+ },
+ {
+  "id": "g78-harlem-blues",
+  "name": "Harlem Blues",
+  "artist": "Mamie Smith, Ethel Waters, Bessie Smith",
+  "year": "1925",
+  "cover": "demo/g78-harlem-blues.webp",
+  "sides": [
+   {
+    "identifier": "78_fare-thee-honey-blues_mamie-smith-and-her-jazz-hounds_gbia0295933b",
+    "name": "Fare Thee Honey Blues",
+    "artist": "Mamie Smith and Her Jazz Hounds",
+    "year": "1920",
+    "durationMs": 181320,
+    "url": "https://archive.org/download/78_fare-thee-honey-blues_mamie-smith-and-her-jazz-hounds_gbia0295933b/FARE%20THEE%20HONEY%20BLUES%20-%20MAMIE%20SMITH%20AND%20HER%20JAZZ%20HOUNDS.mp3"
+   },
+   {
+    "identifier": "78_the-road-is-rocky-but-i-am-gonna-find-my-way_mamie-smith-and-her-jazz-hounds-perr_gbia0295933a",
+    "name": "The Road Is Rocky (But I Am Gonna Find My Way)",
+    "artist": "Mamie Smith and Her Jazz Hounds",
+    "year": "1920",
+    "durationMs": 195790,
+    "url": "https://archive.org/download/78_the-road-is-rocky-but-i-am-gonna-find-my-way_mamie-smith-and-her-jazz-hounds-perr_gbia0295933a/THE%20ROAD%20IS%20ROCKY%20%28But%20I%20-%20MAMIE%20SMITH%20AND%20HER%20JAZZ%20HOUNDS.mp3"
+   },
+   {
+    "identifier": "78_if-you-dont-want-me-blues_mamie-smith-and-her-jazz-hounds-perry-bradford_gbia0295932b",
+    "name": "If You Don't Want Me Blues",
+    "artist": "Mamie Smith and Her Jazz Hounds",
+    "year": "1920",
+    "durationMs": 213770,
+    "url": "https://archive.org/download/78_if-you-dont-want-me-blues_mamie-smith-and-her-jazz-hounds-perry-bradford_gbia0295932b/IF%20YOU%20DON%27T%20WANT%20ME%20BLUES%20-%20MAMIE%20SMITH%20AND%20HER%20JAZZ%20HOUNDS.mp3"
+   },
+   {
+    "identifier": "78_down-home-blues_mamie-smith-and-her-jazz-band-tom-delaney_gbia0295930a",
+    "name": "Down Home Blues",
+    "artist": "Mamie Smith and Her Jazz Band",
+    "year": "1921",
+    "durationMs": 201220,
+    "url": "https://archive.org/download/78_down-home-blues_mamie-smith-and-her-jazz-band-tom-delaney_gbia0295930a/DOWN%20HOME%20BLUES%20-%20MAMIE%20SMITH%20AND%20HER%20JAZZ%20BAND.mp3"
+   },
+   {
+    "identifier": "78_arkansas-blues-a-down-home-chant_mamie-smith-and-her-jazz-band-anton-lada-spencer_gbia0295930b",
+    "name": "Arkansas Blues (A Down Home Chant)",
+    "artist": "Mamie Smith and Her Jazz Band",
+    "year": "1921",
+    "durationMs": 201430,
+    "url": "https://archive.org/download/78_arkansas-blues-a-down-home-chant_mamie-smith-and-her-jazz-band-anton-lada-spencer_gbia0295930b/ARKANSAS%20BLUES%20%28A%20Down%20Hom%20-%20MAMIE%20SMITH%20AND%20HER%20JAZZ%20BAND.mp3"
+   },
+   {
+    "identifier": "78_the-new-york-glide_ethel-waters-alburys-blue-and-jazz-seven-tom-delaney_gbia0275389b",
+    "name": "The New York Glide",
+    "artist": "Ethel Waters",
+    "year": "1921",
+    "durationMs": 199940,
+    "url": "https://archive.org/download/78_the-new-york-glide_ethel-waters-alburys-blue-and-jazz-seven-tom-delaney_gbia0275389b/THE%20NEW%20YORK%20GLIDE%20-%20ETHEL%20WATERS%20-%20ALBURY%27S%20BLUE%20AND%20JAZZ%20SEVEN.mp3"
+   },
+   {
+    "identifier": "78_jazzin-babies-blues_ethel-waters-and-joe-smiths-jazz-masters-richard-jones_gbia0363130a",
+    "name": "Jazzin' Babies Blues",
+    "artist": "Ethel Waters And Joe Smith's Jazz Masters",
+    "year": "1922",
+    "durationMs": 186820,
+    "url": "https://archive.org/download/78_jazzin-babies-blues_ethel-waters-and-joe-smiths-jazz-masters-richard-jones_gbia0363130a/JAZZIN%27%20BABIES%20BLUES%20-%20ETHEL%20WATERS%20And%20Joe%20Smith%27s%20Jazz%20Masters.mp3"
+   },
+   {
+    "identifier": "78_kind-lovin-blues_ethel-waters-and-joe-smiths-jazz-masters-waters-mitchell-henders_gbia0363130b",
+    "name": "Kind Lovin' Blues",
+    "artist": "Ethel Waters And Joe Smith's Jazz Masters",
+    "year": "1922",
+    "durationMs": 186360,
+    "url": "https://archive.org/download/78_kind-lovin-blues_ethel-waters-and-joe-smiths-jazz-masters-waters-mitchell-henders_gbia0363130b/KIND%20LOVIN%27%20BLUES%20-%20ETHEL%20WATERS%20And%20Joe%20Smith%27s%20Jazz%20Masters.mp3"
+   },
+   {
+    "identifier": "78_yellow-dog-blues_bessie-smith-hendersons-hot-six_gbia0464774a",
+    "name": "Yellow Dog Blues",
+    "artist": "Bessie Smith",
+    "year": "1925",
+    "durationMs": 190540,
+    "url": "https://archive.org/download/78_yellow-dog-blues_bessie-smith-hendersons-hot-six_gbia0464774a/Yellow%20Dog%20Blues%20-%20BESSIE%20SMITH%20-%20Henderson%27s%20Hot%20Six.mp3"
+   },
+   {
+    "identifier": "78_my-man-blues_bessie-clara-smith_gbia0465410b",
+    "name": "My Man Blues",
+    "artist": "Bessie & Clara Smith",
+    "year": "1925",
+    "durationMs": 233180,
+    "url": "https://archive.org/download/78_my-man-blues_bessie-clara-smith_gbia0465410b/My%20Man%20Blues%20-%20BESSIE%20%26%20CLARA%20SMITH.mp3"
+   }
+  ]
+ },
+ {
+  "id": "g78-ballroom",
+  "name": "Salón de baile",
+  "artist": "Orquestas de baile · 1920–1925",
+  "year": "1925",
+  "cover": "demo/g78-ballroom.webp",
+  "sides": [
+   {
+    "identifier": "78_whispering_paul-whiteman-and-his-ambassador-orchestra-schonberger_gbia0120433a",
+    "name": "Whispering",
+    "artist": "Paul Whiteman and His Ambassador Orchestra",
+    "year": "1920",
+    "durationMs": 203000,
+    "url": "https://archive.org/download/78_whispering_paul-whiteman-and-his-ambassador-orchestra-schonberger_gbia0120433a/Whispering%20-%20Paul%20Whiteman%20and%20His%20Ambassador%20Orchestra.mp3"
+   },
+   {
+    "identifier": "78_ka-lu-a-blue-danube-blues_paul-whiteman-and-his-orchestra-jerome-kern_gbia0121086a",
+    "name": "Ka-Lu-A-Blue Danube Blues",
+    "artist": "Paul Whiteman and His Orchestra",
+    "year": "1922",
+    "durationMs": 199000,
+    "url": "https://archive.org/download/78_ka-lu-a-blue-danube-blues_paul-whiteman-and-his-orchestra-jerome-kern_gbia0121086a/Ka-Lu-A-Blue%20Danube%20Blues%20-%20Paul%20Whiteman%20and%20His%20Orchestra.mp3"
+   },
+   {
+    "identifier": "78_why-did-i-kiss-that-girl_paul-whiteman-and-his-orchestra-king-henderson_gbia0121083a",
+    "name": "Why did I kiss that girl?",
+    "artist": "Paul Whiteman and His Orchestra",
+    "year": "1924",
+    "durationMs": 168000,
+    "url": "https://archive.org/download/78_why-did-i-kiss-that-girl_paul-whiteman-and-his-orchestra-king-henderson_gbia0121083a/Why%20did%20I%20kiss%20that%20girl%3F%20-%20Paul%20Whiteman%20and%20His%20Orchestra.mp3"
+   },
+   {
+    "identifier": "78_chicago_paul-whiteman-and-his-orchestra-fred-fisher_gbia3033400a",
+    "name": "Chicago",
+    "artist": "Paul Whiteman and his Orchestra",
+    "year": "1923",
+    "durationMs": 198000,
+    "url": "https://archive.org/download/78_chicago_paul-whiteman-and-his-orchestra-fred-fisher_gbia3033400a/Chicago%20-%20Paul%20Whiteman%20and%20his%20Orchestra.mp3"
+   },
+   {
+    "identifier": "78_it-had-to-be-you_marion-harris-phil-ohman-isham-jones-gus-kahn_gbia3004828a",
+    "name": "It Had to Be You",
+    "artist": "Marion Harris",
+    "year": "1924",
+    "durationMs": 199000,
+    "url": "https://archive.org/download/78_it-had-to-be-you_marion-harris-phil-ohman-isham-jones-gus-kahn_gbia3004828a/IT%20HAD%20TO%20BE%20YOU%20-%20MARION%20HARRIS%20-%20Phil%20Ohman.mp3"
+   },
+   {
+    "identifier": "78_shanghai-lullaby_broadway-dance-orchestra-isham-jones_gbia0180300a",
+    "name": "Shanghai Lullaby",
+    "artist": "Broadway Dance Orchestra",
+    "year": "1924",
+    "durationMs": 231000,
+    "url": "https://archive.org/download/78_shanghai-lullaby_broadway-dance-orchestra-isham-jones_gbia0180300a/SHANGHAI%20LULLABY%20-%20BROADWAY%20DANCE%20ORCHESTRA.mp3"
+   },
+   {
+    "identifier": "78_ill-see-you-in-my-dreams_ace-brigode-and-his-14-virginians-gus-kahn-isham-jones_gbia0083034a",
+    "name": "I'll See You In My Dreams",
+    "artist": "Ace Brigode and His 14 Virginians",
+    "year": "1925",
+    "durationMs": 236000,
+    "url": "https://archive.org/download/78_ill-see-you-in-my-dreams_ace-brigode-and-his-14-virginians-gus-kahn-isham-jones_gbia0083034a/I%27ll%20See%20You%20In%20My%20Dreams%20-%20Ace%20Brigode%20and%20His%2014%20Virginians.mp3"
+   },
+   {
+    "identifier": "78_yes-we-have-no-bananas_golden-gate-orchestra-silver-cohn_gbia0101533a",
+    "name": "Yes! We Have No Bananas",
+    "artist": "Golden Gate Orchestra",
+    "year": "1923",
+    "durationMs": 217000,
+    "url": "https://archive.org/download/78_yes-we-have-no-bananas_golden-gate-orchestra-silver-cohn_gbia0101533a/Yes%21%20We%20Have%20No%20Bananas%20-%20Golden%20Gate%20Orchestra.mp3"
+   },
+   {
+    "identifier": "78_wonderful-one_elizabeth-spencer-paul-whiteman-and-ferdie-grofe_gbia0087988a",
+    "name": "Wonderful One",
+    "artist": "Elizabeth Spencer",
+    "year": "1923",
+    "durationMs": 208000,
+    "url": "https://archive.org/download/78_wonderful-one_elizabeth-spencer-paul-whiteman-and-ferdie-grofe_gbia0087988a/Wonderful%20One%20-%20Elizabeth%20Spencer%20-%20Paul%20Whiteman%20and%20Ferdie%20Grofe.mp3"
+   }
+  ]
+ },
+ {
+  "id": "g78-opera-violin",
+  "name": "Ópera y violín",
+  "artist": "Enrico Caruso, Fritz Kreisler",
+  "year": "1925",
+  "cover": "demo/g78-opera-violin.webp",
+  "sides": [
+   {
+    "identifier": "78_tosca---recondita-armonia-strange-harmony_enrico-caruso-puccini-victor-orchestra_gbia0012569a",
+    "name": "Tosca - Recondita armonia (Strange Harmony)",
+    "artist": "Enrico Caruso",
+    "year": "1909",
+    "durationMs": 133940,
+    "url": "https://archive.org/download/78_tosca---recondita-armonia-strange-harmony_enrico-caruso-puccini-victor-orchestra_gbia0012569a/Tosca%20-%20Recondita%20armonia%20%28Strange%20Harmony%20-%20Enrico%20Caruso-restored.mp3"
+   },
+   {
+    "identifier": "78_rigoletto---la-donna-e-mobile-woman-is-fickle_enrico-caruso-verdi-victor-orchestr_gbia0012560a",
+    "name": "Rigoletto - La donna e mobile (Woman is Fickle)",
+    "artist": "Enrico Caruso",
+    "year": "1908",
+    "durationMs": 140000,
+    "url": "https://archive.org/download/78_rigoletto---la-donna-e-mobile-woman-is-fickle_enrico-caruso-verdi-victor-orchestr_gbia0012560a/Rigoletto%20-%20La%20donna%20e%20mobile%20%28Woman%20is%20Fi%20-%20Enrico%20Caruso.mp3"
+   },
+   {
+    "identifier": "78_trovatore---di-quella-pira-tremble-ye-tyrants-act-2_enrico-caruso-verdi_gbia0012563a",
+    "name": "Trovatore - Di quella pira (Tremble, Ye Tyrants) (Act 2)",
+    "artist": "Enrico Caruso",
+    "year": "1906",
+    "durationMs": 109000,
+    "url": "https://archive.org/download/78_trovatore---di-quella-pira-tremble-ye-tyrants-act-2_enrico-caruso-verdi_gbia0012563a/Trovatore%20-%20Di%20quella%20pira%20%28Tremble%2C%20Ye%20Ty%20-%20Enrico%20Caruso.mp3"
+   },
+   {
+    "identifier": "78_boheme-o-soave-fanciulla-thou-sweetest-maiden_nellie-melba-and-enrico-caruso-pucc_gbia0105023a",
+    "name": "Boheme-O soave fanciulla (Thou Sweetest Maiden)",
+    "artist": "Nellie Melba and Enrico Caruso",
+    "year": "1907",
+    "durationMs": 200000,
+    "url": "https://archive.org/download/78_boheme-o-soave-fanciulla-thou-sweetest-maiden_nellie-melba-and-enrico-caruso-pucc_gbia0105023a/Boheme-O%20soave%20fanciulla%20%20-%20Nellie%20Melba%20and%20Enrico%20Caruso.mp3"
+   },
+   {
+    "identifier": "78_because_enrico-caruso-teschemacher-dhardelot_gbia0420975a",
+    "name": "Because",
+    "artist": "Enrico Caruso",
+    "year": "1914",
+    "durationMs": 150000,
+    "url": "https://archive.org/download/78_because_enrico-caruso-teschemacher-dhardelot_gbia0420975a/Because%20-%20Enrico%20Caruso%20-%20Teschemacher%20-%20d%27Hardelot.mp3"
+   },
+   {
+    "identifier": "78_songs-my-mother-taught-me_fritz-kreisler-dvorak-kreisler-carl-lamson_gbia0016601a",
+    "name": "Songs My Mother Taught Me",
+    "artist": "Fritz Kreisler",
+    "year": "1916",
+    "durationMs": 193000,
+    "url": "https://archive.org/download/78_songs-my-mother-taught-me_fritz-kreisler-dvorak-kreisler-carl-lamson_gbia0016601a/Songs%20My%20Mother%20Taught%20Me%20-%20Fritz%20Kreisler.mp3"
+   },
+   {
+    "identifier": "78_beautiful-ohio_fritz-kreisler-mary-earl_gbia0019690a",
+    "name": "Beautiful Ohio",
+    "artist": "Fritz Kreisler",
+    "year": "1919",
+    "durationMs": 201000,
+    "url": "https://archive.org/download/78_beautiful-ohio_fritz-kreisler-mary-earl_gbia0019690a/Beautiful%20Ohio%20-%20Fritz%20Kreisler%20-%20Mary%20Earl.mp3"
+   },
+   {
+    "identifier": "78_pale-moon-indian-love-song_fritz-kreisler-logan-r.-kreisler_gbia0012554a",
+    "name": "Pale Moon (Indian Love Song)",
+    "artist": "Fritz Kreisler",
+    "year": "1923",
+    "durationMs": 211000,
+    "url": "https://archive.org/download/78_pale-moon-indian-love-song_fritz-kreisler-logan-r.-kreisler_gbia0012554a/Pale%20Moon%20%28Indian%20Love%20Song%29%20-%20Fritz%20Kreisler.mp3"
+   },
+   {
+    "identifier": "78_song-of-the-volga-boatmen_fritz-kreisler-carl-lamson-kreisler_gbia0015765a",
+    "name": "Song of the Volga Boatmen",
+    "artist": "Fritz Kreisler",
+    "year": "1925",
+    "durationMs": 190000,
+    "url": "https://archive.org/download/78_song-of-the-volga-boatmen_fritz-kreisler-carl-lamson-kreisler_gbia0015765a/Song%20of%20the%20Volga%20Boatmen%20-%20Fritz%20Kreisler.mp3"
+   },
+   {
+    "identifier": "78_aloha-oe-farewell-to-thee_fritz-kreisler-queen-liliuokalani-kreisler-carl-lamson_gbia0035929a",
+    "name": "Aloha Oe (Farewell to Thee)",
+    "artist": "Fritz Kreisler",
+    "year": "1925",
+    "durationMs": 180000,
+    "url": "https://archive.org/download/78_aloha-oe-farewell-to-thee_fritz-kreisler-queen-liliuokalani-kreisler-carl-lamson_gbia0035929a/Aloha%20Oe%20%28Farewell%20to%20Thee%29%20-%20Fritz%20Kreisler.mp3"
+   }
+  ]
+ }
+]

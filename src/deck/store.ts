@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { getAlbum, type Album } from '../spotify/api'
 import { splitIntoSides, type Side } from '../vinyl/sides'
 import { deckAudio } from '../audio/deckAudio'
+import { isDemoAlbum } from '../demo/great78'
 
 // Physical state of the room. The 3D rig animates towards it every frame and
 // the playback controller derives what Spotify should be doing from it.
@@ -44,6 +45,9 @@ interface DeckState {
   pickedFrom: { pos: [number, number, number]; quat: [number, number, number, number]; watch: boolean } | null
   message: string | null
 
+  /** Back to an empty deck (leaving for the home page). */
+  reset: () => void
+
   /** A view the user chose (buttons, keys): always obeyed. */
   setFocus: (f: Focus) => void
   /** A view an action suggests (picking, taking a record…): ignored in the free and crate + deck views. */
@@ -68,22 +72,27 @@ interface DeckState {
   say: (m: string | null) => void
 }
 
-export const useDeck = create<DeckState>((set, get) => ({
-  focus: 'room',
+const INITIAL = {
+  focus: 'room' as Focus,
   album: null,
   sides: [],
   sideIndex: 0,
-  vinyl: 'sleeve',
+  vinyl: 'sleeve' as VinylPlace,
   lidOpen: true,
   motorOn: false,
-  speed: 33,
-  arm: 'rest',
+  speed: 33 as const,
+  arm: 'rest' as ArmState,
   armYaw: 0,
   stylusRadius: null,
   contact: false,
   atSpeed: false,
   pickedFrom: null,
   message: null,
+}
+
+export const useDeck = create<DeckState>((set, get) => ({
+  ...INITIAL,
+  reset: () => set(INITIAL),
 
   setFocus: (focus) => set({ focus }),
   followFocus: (focus) => {
@@ -97,7 +106,8 @@ export const useDeck = create<DeckState>((set, get) => ({
     }
     try {
       // Search results and saved albums may carry a partial tracklist
-      const album = picked.id.startsWith('demo') ? picked : await getAlbum(picked.id)
+      // (the demo records come complete)
+      const album = picked.id.startsWith('demo') || isDemoAlbum(picked.id) ? picked : await getAlbum(picked.id)
       // With a known origin the deck carries the sleeve over and moves the
       // camera itself once it has landed (or right away, if `watch` is off)
       set({

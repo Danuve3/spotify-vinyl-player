@@ -1,11 +1,10 @@
 import { useEffect, useRef } from 'react'
-import { play } from '../spotify/api'
-import type { PlayerSnapshot } from '../spotify/player'
 import { deckAudio } from '../audio/deckAudio'
+import type { PlaybackSource } from './source'
 import { currentSide, useDeck } from './store'
 import { R_LEAD_IN, R_LEAD_OUT, radiusAt, spotAt } from '../vinyl/sides'
 
-// Bridges the physical deck and Spotify:
+// Bridges the physical deck and the music source (Spotify or the demo records):
 // - stylus lands at radius r  -> play the track/position engraved there
 // - while playing             -> move the stylus inward with the music
 // - gaps / lead-in            -> silence while the stylus crosses them
@@ -21,10 +20,15 @@ type Mode =
   | { kind: 'playing'; trackUri: string }
   | { kind: 'run-out'; since: number }
 
-export function usePlayback(player: React.RefObject<Spotify.Player | null>, deviceId: string | null, snapshot: PlayerSnapshot | null) {
+export function usePlayback(source: PlaybackSource) {
   const mode = useRef<Mode>({ kind: 'idle' })
-  const snap = useRef(snapshot)
-  snap.current = snapshot
+  const snap = useRef(source.snapshot)
+  snap.current = source.snapshot
+  const src = useRef(source)
+  src.current = source
+
+  // Old 78s already crackle and hiss on their own: no surface noise of ours on top
+  useEffect(() => deckAudio().setSurfaceNoise(!source.ownSurfaceNoise), [source.ownSurfaceNoise])
 
   useEffect(() => {
     let raf = 0
@@ -32,14 +36,14 @@ export function usePlayback(player: React.RefObject<Spotify.Player | null>, devi
 
     const pause = () => {
       const s = snap.current
-      if (s && !s.paused) void player.current?.pause()
+      if (s && !s.paused) src.current.pause()
     }
 
     const startTrack = (trackUri: string, positionMs: number) => {
       const { album } = useDeck.getState()
-      if (!album || !deviceId) return
+      if (!album || !src.current.ready) return
       mode.current = { kind: 'starting', trackUri, since: performance.now() }
-      play(deviceId, album.uri, trackUri, positionMs).catch((e: Error) => {
+      src.current.play(album.uri, trackUri, positionMs).catch((e: Error) => {
         useDeck.getState().say(e.message)
         mode.current = { kind: 'idle' }
       })
@@ -86,7 +90,7 @@ export function usePlayback(player: React.RefObject<Spotify.Player | null>, devi
       } else if (m.kind === 'starting') {
         const s = snap.current
         if (s && !s.paused && s.trackUri === m.trackUri) mode.current = { kind: 'playing', trackUri: m.trackUri }
-        else if (now - m.since > 8000) mode.current = { kind: 'idle' } // retry
+        else if (now - m.since > 15000) mode.current = { kind: 'idle' } // retry (streams can be slow to start)
       } else if (m.kind === 'playing') {
         const s = snap.current
         if (!s) return void (raf = requestAnimationFrame(tick))
@@ -127,7 +131,7 @@ export function usePlayback(player: React.RefObject<Spotify.Player | null>, devi
 
     raf = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(raf)
-  }, [player, deviceId])
+  }, [])
 
   // A manual lift or stop clears any pending run-out loop immediately
   useEffect(
