@@ -49,13 +49,13 @@ const trafficVertex = /* glsl */ `
       t += aOffset / len;
       k = smoothstep(0.0, 0.04, t) * smoothstep(1.0, 0.96, t);
       bool head = aOffset * aMove.z > 0.0;
-      vColor = (head ? vec3(0.75, 0.95, 1.3) : vec3(1.3, 0.12, 0.35)) * 2.2 * k;
+      vColor = (head ? vec3(0.75, 0.95, 1.3) : vec3(1.3, 0.12, 0.35)) * 2.2 * k * (1.0 - uDay * 0.75);
     } else {
       // Guide lights: a pulse chasing along the lane
       t = aMove.y;
       float chase = fract(t * 6.0 - uTime * 0.35);
       k = 0.15 + 0.85 * pow(1.0 - chase, 10.0);
-      vColor = vec3(0.1, 0.9, 1.2) * k * 0.9;
+      vColor = vec3(0.1, 0.9, 1.2) * k * 0.9 * (1.0 - uDay * 0.8);
     }
     vec3 p = mix(a, b, t);
     // A gentle rise and fall so the lanes are not ruled lines
@@ -88,7 +88,7 @@ const droneVertex = /* glsl */ `
     vec3 p = position + vec3(sin(t) * 12.0, sin(t * 1.7) * 5.0, cos(t * 0.8) * 12.0);
     float blink = step(0.8, fract(uTime * (0.6 + aSeed.y * 0.5) + aSeed.z));
     vec3 c = aSeed.w < 0.33 ? vec3(1.2, 0.2, 1.0) : aSeed.w < 0.66 ? vec3(0.2, 1.1, 1.2) : vec3(1.2, 0.7, 0.2);
-    vColor = c * (0.35 + 1.8 * blink);
+    vColor = c * (0.35 + 1.8 * blink) * (1.0 - uDay * 0.7);
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
     gl_PointSize = clamp(3.0 * uUnit * uProj / -mv.z, 1.0, 4.0);
@@ -179,13 +179,14 @@ const beamVertex = /* glsl */ `
 const beamFragment = /* glsl */ `
   uniform vec3 uColor;
   uniform float uRain;
+  uniform float uDay;
   varying float vAlong;
   varying vec3 vNormal;
   varying vec3 vView;
   void main() {
     // Brightest at the source, fading upwards; soft at the silhouette
     float core = pow(abs(dot(normalize(vNormal), normalize(vView))), 1.5);
-    float a = pow(1.0 - vAlong, 2.2) * core * (1.0 + uRain * 0.8);
+    float a = pow(1.0 - vAlong, 2.2) * core * (1.0 + uRain * 0.8) * (1.0 - uDay);
     gl_FragColor = vec4(uColor * a, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -206,7 +207,7 @@ function makeBeams() {
     const mesh = new THREE.Mesh(
       geo,
       new THREE.ShaderMaterial({
-        uniforms: { uColor: { value: new THREE.Vector3(...b.colour) }, uRain: view.uRain },
+        uniforms: { uColor: { value: new THREE.Vector3(...b.colour) }, uRain: view.uRain, uDay: view.uDay },
         vertexShader: beamVertex,
         fragmentShader: beamFragment,
         transparent: true,

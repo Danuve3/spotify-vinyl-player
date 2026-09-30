@@ -23,7 +23,7 @@ const vertex = /* glsl */ `
     vec3 p = position + vec3(sin(t * 1.3 + aSeed.x * 6.0), sin(t * 0.9 + aSeed.y * 6.0) * 0.35, cos(t * 1.1 + aSeed.z * 6.0)) * (0.6 + aSeed.w);
     // A slow pulse every few seconds, each on its own rhythm
     float phase = fract(uTime / (2.5 + aSeed.x * 4.0) + aSeed.y);
-    vGlow = smoothstep(0.0, 0.12, phase) * (1.0 - smoothstep(0.18, 0.55, phase)) * (1.0 - uRain);
+    vGlow = smoothstep(0.0, 0.12, phase) * (1.0 - smoothstep(0.18, 0.55, phase)) * (1.0 - uRain) * (1.0 - uDay);
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
     gl_PointSize = vGlow <= 0.01 ? 0.0 : clamp(0.09 * uUnit * uProj / -mv.z, 1.5, 9.0);

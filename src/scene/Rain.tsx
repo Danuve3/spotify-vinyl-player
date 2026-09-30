@@ -41,17 +41,26 @@ const dropsFragment = /* glsl */ `
   uniform sampler2D uPhoto;
   uniform float uHalfSpan;
   uniform vec2 uElevation;
+  uniform sampler2D uPhotoDay;
+  uniform float uHalfSpanDay;
+  uniform vec2 uElevationDay;
+  uniform float uDay;
   uniform vec3 uHaze;
   varying vec3 vWorld;
   ${hashGlsl}
 
-  // What a drop shows: the city photo (or the sky above it) in direction d
-  vec3 cityColour(vec3 d) {
+  vec3 photoColour(sampler2D tex, float halfSpan, vec2 elev, vec3 d) {
     float az = atan(d.z, d.x);
     float el = asin(clamp(d.y, -1.0, 1.0));
-    vec2 uv = vec2(0.5 + az / (2.0 * uHalfSpan), (el - uElevation.x) / (uElevation.y - uElevation.x));
+    vec2 uv = vec2(0.5 + az / (2.0 * halfSpan), (el - elev.x) / (elev.y - elev.x));
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y > 1.0) return uHaze * 1.2;
-    return texture(uPhoto, clamp(uv, vec2(0.0), vec2(1.0)), 0.6).rgb;
+    return texture(tex, clamp(uv, vec2(0.0), vec2(1.0)), 0.6).rgb;
+  }
+  // What a drop shows: the view outside (or the sky above it) in direction d
+  vec3 cityColour(vec3 d) {
+    vec3 night = uDay < 0.999 ? photoColour(uPhoto, uHalfSpan, uElevation, d) : vec3(0.0);
+    vec3 day = uDay > 0.001 ? photoColour(uPhotoDay, uHalfSpanDay, uElevationDay, d) : vec3(0.0);
+    return mix(night, day, uDay);
   }
 
   // Round beads that form and evaporate: xy = lens normal, z = coverage
@@ -176,6 +185,10 @@ export function Rain() {
       uHalfSpan: view.uHalfSpan,
       uElevation: view.uElevation,
       uHaze: view.uHaze,
+      uPhotoDay: view.uPhotoDay,
+      uHalfSpanDay: view.uHalfSpanDay,
+      uElevationDay: view.uElevationDay,
+      uDay: view.uDay,
     }
 
     const w = GLASS.z1 - GLASS.z0

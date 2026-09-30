@@ -10,6 +10,7 @@ import { Room } from './scene/Room'
 import { Search } from './ui/Search'
 import { useWeather } from './scene/weather'
 import { LANDSCAPES, LANDSCAPE_ORDER, useLandscape, type LandscapeId } from './scene/landscape/landscapes'
+import { useDaytime } from './scene/daytime'
 import { useIdle } from './ui/useIdle'
 import { useCrateFront } from './scene/Crate'
 
@@ -76,6 +77,7 @@ export default function App() {
   const focus = useDeck((s) => s.focus)
   const rain = useWeather((s) => s.rain)
   const landscape = useLandscape((s) => s.id)
+  const day = useDaytime((s) => s.day)
   // With no input for a while the controls fade away, leaving just the room
   const idle = useIdle(4000)
 
@@ -174,6 +176,14 @@ export default function App() {
               ))}
             </select>
           </label>
+          <button
+            className={`ghost toggle ${day ? 'toggle--on' : ''}`}
+            onClick={useDaytime.getState().toggle}
+            aria-pressed={day}
+            title={day ? 'Que se haga de noche' : 'Que se haga de día'}
+          >
+            Día
+          </button>
           {LANDSCAPES[landscape].rain && (
             <button
               className={`ghost toggle ${rain ? 'toggle--on' : ''}`}

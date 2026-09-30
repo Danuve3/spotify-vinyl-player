@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { rainAmount } from '../weather'
+import { dayLevel } from '../daytime'
 
 // Uniforms shared by the sky, the photo, the animated layers and the rain on
 // the glass (which refracts the photo), updated in place when the landscape
@@ -21,6 +22,14 @@ function makeUniforms() {
     uHalfSpan: { value: 1 },
     uElevation: { value: new THREE.Vector2(-0.5, 0.5) },
     uExposure: { value: 1 },
+    // The daytime photo, faded in by uDay
+    uPhotoDay: { value: null as THREE.Texture | null },
+    uPhotoSizeDay: { value: new THREE.Vector2(1, 1) },
+    uHalfSpanDay: { value: 1 },
+    uElevationDay: { value: new THREE.Vector2(-0.5, 0.5) },
+    uExposureDay: { value: 1 },
+    uMirrorDay: { value: 1 },
+    uDay: dayLevel,
     uHaze: { value: new THREE.Vector3() },
     uZenith: { value: new THREE.Vector3() },
     uMoon: { value: new THREE.Vector3(1, 0, 0) },

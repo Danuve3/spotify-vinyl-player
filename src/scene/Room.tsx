@@ -18,6 +18,7 @@ import { Rain } from './Rain'
 import { LampCord } from './LampCord'
 import { Shelf } from './Shelf'
 import { lampLevel, useLamp } from './lamp'
+import { dayLevel, useDaytime } from './daytime'
 
 // The living room: static geometry uses light baked in Blender (unlit
 // materials + lightmaps), while the deck and records are lit in real time
@@ -33,21 +34,44 @@ const TINTS: Record<string, { rgb: [number, number, number]; flat?: boolean }> =
   oak_veneer_02: { rgb: [0.78, 0.48, 0.28] }, // oiled teak crate
 }
 const LIGHTMAP_URL = `${import.meta.env.BASE_URL}models/lightmaps/`
+// Daylight is baked from a much brighter window than the night; this brings
+// it to a comfortable level indoors (the camera "adapts")
+const DAY_EXPOSURE = 0.24
+// Scale of the daylight bakes (blender/bake_day.py), until room.glb is
+// exported again with them as extras
+const DAY_SCALES: Record<string, number> = { 'arch.png': 9.9469, 'furn.png': 9.4355 }
 
-// Baked surfaces carry two lightmaps, lamp on and lamp off (moon and city
-// only); the shader blends them with the lamp's level.
-function blendLampOff(mat: THREE.MeshBasicMaterial, off: THREE.Texture, offIntensity: number) {
-  mat.customProgramCacheKey = () => 'lamp-blend'
+// Baked surfaces carry three lightmaps: lamp on and lamp off at night (moon
+// and city only), and daylight with the lamp off. The shader fades between
+// night and day and adds the lamp's own share (on minus off) on top, so the
+// lamp can be switched on by day too.
+function blendLightmaps(
+  mat: THREE.MeshBasicMaterial,
+  off: THREE.Texture,
+  offIntensity: number,
+  day: THREE.Texture | null,
+  dayIntensity: number,
+) {
+  mat.customProgramCacheKey = () => (day ? 'lamp-day-blend' : 'lamp-blend')
   mat.onBeforeCompile = (shader) => {
     shader.uniforms.lightMapOff = { value: off }
     shader.uniforms.lightMapOffIntensity = { value: offIntensity }
+    shader.uniforms.lightMapDay = { value: day ?? off }
+    shader.uniforms.lightMapDayIntensity = { value: day ? dayIntensity : offIntensity }
     shader.uniforms.uLamp = lampLevel
+    shader.uniforms.uDay = dayLevel
     shader.fragmentShader = shader.fragmentShader
-      .replace('void main() {', 'uniform sampler2D lightMapOff;\nuniform float lightMapOffIntensity;\nuniform float uLamp;\nvoid main() {')
+      .replace(
+        'void main() {',
+        'uniform sampler2D lightMapOff;\nuniform float lightMapOffIntensity;\nuniform sampler2D lightMapDay;\nuniform float lightMapDayIntensity;\nuniform float uLamp;\nuniform float uDay;\nvoid main() {',
+      )
       .replace(
         'reflectedLight.indirectDiffuse += lightMapTexel.rgb * lightMapIntensity * RECIPROCAL_PI;',
         `vec3 lampOff = texture2D( lightMapOff, vLightMapUv ).rgb * lightMapOffIntensity;
-        reflectedLight.indirectDiffuse += mix( lampOff, lightMapTexel.rgb * lightMapIntensity, uLamp ) * RECIPROCAL_PI;`,
+        vec3 lampOn = lightMapTexel.rgb * lightMapIntensity;
+        vec3 daylight = texture2D( lightMapDay, vLightMapUv ).rgb * lightMapDayIntensity;
+        vec3 lamp = max( lampOn - lampOff, vec3( 0.0 ) );
+        reflectedLight.indirectDiffuse += ( mix( lampOff, daylight, uDay ) + lamp * uLamp ) * RECIPROCAL_PI;`,
       )
   }
 }
@@ -102,7 +126,16 @@ function StaticRoom() {
         }
         basic.lightMap = lm
         basic.lightMapIntensity = bakedScale * Math.PI
-        if (offScale !== undefined) blendLampOff(basic, loadLightmap(baked.replace(/\.png$/, '_off.webp')), offScale * Math.PI)
+        if (offScale !== undefined) {
+          const dayScale = (holder?.userData.lightmap_day_scale as number | undefined) ?? DAY_SCALES[baked]
+          blendLightmaps(
+            basic,
+            loadLightmap(baked.replace(/\.png$/, '_off.webp')),
+            offScale * Math.PI,
+            dayScale !== undefined ? loadLightmap(baked.replace(/\.png$/, '_day.webp')) : null,
+            (dayScale ?? 0) * DAY_EXPOSURE * Math.PI,
+          )
+        }
         return basic
       }
       mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material)
@@ -140,13 +173,27 @@ function StaticRoom() {
   return <primitive object={scene} />
 }
 
+const WINDOW_NIGHT = new THREE.Color('#8fb0ff')
+const WINDOW_DAY = new THREE.Color('#fff4e6')
+
 function Lights({ shadows }: { shadows: boolean }) {
   const lampOn = useLamp((s) => s.on)
+  const day = useDaytime((s) => s.day)
   const bulb = useRef<THREE.PointLight>(null)
+  const windowLight = useRef<THREE.DirectionalLight>(null)
+  const ambient = useRef<THREE.AmbientLight>(null)
   useFrame((_, dt) => {
     // A filament glows up (and dies down) in a few tens of milliseconds
     lampLevel.value = THREE.MathUtils.damp(lampLevel.value, lampOn ? 1 : 0, lampOn ? 22 : 30, Math.min(dt, 0.05))
     if (bulb.current) bulb.current.intensity = 6 * lampLevel.value
+    // Day and night fade over a couple of seconds
+    dayLevel.value = THREE.MathUtils.damp(dayLevel.value, day ? 1 : 0, 2.2, Math.min(dt, 0.05))
+    const d = dayLevel.value
+    if (windowLight.current) {
+      windowLight.current.intensity = THREE.MathUtils.lerp(0.3, 1.4, d)
+      windowLight.current.color.lerpColors(WINDOW_NIGHT, WINDOW_DAY, d)
+    }
+    if (ambient.current) ambient.current.intensity = THREE.MathUtils.lerp(0.04, 0.35, d)
   })
   return (
     <>
@@ -163,16 +210,23 @@ function Lights({ shadows }: { shadows: boolean }) {
         shadow-bias={-0.0004}
         shadow-radius={6}
       />
-      {/* Moonlight and city glow through the glass wall */}
-      <directionalLight position={[3.5, 1.8, 1.2]} intensity={0.3} color="#8fb0ff" />
-      <ambientLight intensity={0.04} color="#ffd6a8" />
-      {/* Reflections for the metal and vinyl: warm lamp blob + cool window */}
-      {/* Re-rendered once whenever the lamp is switched */}
-      <Environment key={lampOn ? 'lamp-on' : 'lamp-off'} resolution={128} frames={1}>
-        <color attach="background" args={['#0a0706']} />
+      {/* Moonlight and city glow (or daylight) through the glass wall */}
+      <directionalLight ref={windowLight} position={[3.5, 1.8, 1.2]} intensity={0.3} color="#8fb0ff" />
+      <ambientLight ref={ambient} intensity={0.04} color="#ffd6a8" />
+      {/* Reflections for the metal and vinyl: warm lamp blob + the window */}
+      {/* Re-rendered once whenever the lamp is switched or day turns to night */}
+      <Environment key={`${lampOn ? 'lamp-on' : 'lamp-off'}-${day ? 'day' : 'night'}`} resolution={128} frames={1}>
+        <color attach="background" args={[day ? '#3a342e' : '#0a0706']} />
         {lampOn && <Lightformer form="circle" intensity={4} color="#ffb070" position={[-1.6, 1.5, 0]} scale={0.6} />}
-        <Lightformer form="rect" intensity={0.9} color="#8f8cb8" position={[2.3, 1.3, 1.55]} rotation-y={-Math.PI / 2} scale={[3.7, 2.6, 1]} />
-        <Lightformer form="rect" intensity={0.15} color="#ffe2c0" position={[0, 2.6, 0.5]} rotation-x={Math.PI / 2} scale={[3, 3, 1]} />
+        <Lightformer
+          form="rect"
+          intensity={day ? 6 : 0.9}
+          color={day ? '#e8eeff' : '#8f8cb8'}
+          position={[2.3, 1.3, 1.55]}
+          rotation-y={-Math.PI / 2}
+          scale={[3.7, 2.6, 1]}
+        />
+        <Lightformer form="rect" intensity={day ? 0.8 : 0.15} color="#ffe2c0" position={[0, 2.6, 0.5]} rotation-x={Math.PI / 2} scale={[3, 3, 1]} />
       </Environment>
     </>
   )

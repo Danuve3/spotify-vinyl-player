@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react'
+import { useFrame } from '@react-three/fiber'
 import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { common } from './shaders'
@@ -16,6 +17,8 @@ const EARTH_AZ = deg(-22)
 const EARTH_EL = deg(14)
 // The sun, low and to the right, as in the photograph
 const SUN = new THREE.Vector3(Math.cos(deg(8)) * Math.cos(deg(105)), Math.sin(deg(8)), Math.cos(deg(8)) * Math.sin(deg(105))).normalize()
+// In the lunar night the sun is behind us: the Earth is full (and lights the ground)
+const SUN_NIGHT = new THREE.Vector3(Math.cos(EARTH_EL) * Math.cos(EARTH_AZ), Math.sin(EARTH_EL), Math.cos(EARTH_EL) * Math.sin(EARTH_AZ)).negate()
 
 const earthVertex = /* glsl */ `
   varying vec3 vNormal;
@@ -100,7 +103,7 @@ export function MoonSky() {
     const earth = new THREE.Mesh(
       new THREE.SphereGeometry(RADIUS, 64, 32),
       new THREE.ShaderMaterial({
-        uniforms: { ...view, uEarth: { value: earthMap }, uSun: { value: SUN } },
+        uniforms: { ...view, uEarth: { value: earthMap }, uSun: { value: SUN.clone() } },
         vertexShader: earthVertex,
         fragmentShader: earthFragment,
       }),
@@ -127,6 +130,10 @@ export function MoonSky() {
     },
     [earth, craft],
   )
+  useFrame(() => {
+    const sun = (earth.material as THREE.ShaderMaterial).uniforms.uSun.value as THREE.Vector3
+    sun.lerpVectors(SUN_NIGHT, SUN, view.uDay.value).normalize()
+  })
   return (
     <>
       <primitive object={earth} />

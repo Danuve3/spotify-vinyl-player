@@ -56,7 +56,8 @@ El workflow `Deploy to GitHub Pages` también se puede lanzar a mano desde la pe
 - `src/audio/` — crackle, motor, aguja y surco final sintetizados con Web Audio.
 - `src/scene/` — escena React Three Fiber, cámara sentada y calidad adaptativa.
 - `src/scene/landscape/` — lo que se ve por la cristalera, a elegir: Manhattan, campo, mar, futurista, postapocalíptico o la Luna. Cada uno es una panorámica real bajo un cielo procedural (luna, nubes, estrellas, humo) con su propia animación (tráfico, luciérnagas, oleaje, vehículos voladores, fuegos, la Tierra girando).
-- `blender/landscapes.py` — recorta y etalona las panorámicas originales (en `sources/`, fuera del repo) a `public/landscapes/`.
+- `blender/landscapes.py` — recorta y etalona las panorámicas originales (en `sources/`, fuera del repo) a `public/landscapes/`, de noche y de día.
+- `blender/bake_day.py` — hornea los lightmaps de día (`arch_day`, `furn_day`): lámpara apagada y luz de día por la cristalera. El modo día funde entre los lightmaps de noche y los de día, y la lámpara se suma encima.
 
 ## Créditos
 
@@ -64,11 +65,11 @@ Modelos y texturas de la habitación de [Poly Haven](https://polyhaven.com) (CC0
 
 Paisajes de la ventana (`public/landscapes/`, recortados, redimensionados y etalonados; las obras derivadas de fotos CC BY-SA se distribuyen bajo la misma licencia):
 
-- Manhattan: [*Manhattan at night south of Rockefeller Center panorama*](https://commons.wikimedia.org/wiki/File:Manhattan_at_night_south_of_Rockefeller_Center_panorama_(11256p).jpg), de Rhododendrites, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-- Campo: HDRI [*Clarens Night 01*](https://polyhaven.com/a/clarens_night_01), de Poly Haven (CC0).
-- Mar: cielo del HDRI [*Kloppenheim 02 (Pure Sky)*](https://polyhaven.com/a/kloppenheim_02_puresky), de Poly Haven (CC0); el mar se genera en tiempo real.
-- Futurista: [*Panorama of Chongqing at night taken from Eling Park*](https://commons.wikimedia.org/wiki/File:Panorama_of_Chongqing_at_night_taken_from_Eling_Park.jpeg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
-- Postapocalíptico: [*Pripyat panorama 2009-001*](https://commons.wikimedia.org/wiki/File:Pripyat_panorama_2009-001.jpg), [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/); llevada al anochecer y sin el cielo original.
+- Manhattan: de noche, [*Manhattan at night south of Rockefeller Center panorama*](https://commons.wikimedia.org/wiki/File:Manhattan_at_night_south_of_Rockefeller_Center_panorama_(11256p).jpg), de Rhododendrites, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); de día, [*New York City Skyline from Top of the Rock, January 11 2026*](https://commons.wikimedia.org/wiki/File:New_York_City_Skyline_from_Top_of_the_Rock,_January_11_2026.jpg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- Campo: HDRI [*Clarens Night 01*](https://polyhaven.com/a/clarens_night_01) y [*Clarens Midday*](https://polyhaven.com/a/clarens_midday), de Poly Haven (CC0).
+- Mar: cielos de los HDRI [*Kloppenheim 02 (Pure Sky)*](https://polyhaven.com/a/kloppenheim_02_puresky) y [*Kloppenheim 06 (Pure Sky)*](https://polyhaven.com/a/kloppenheim_06_puresky), de Poly Haven (CC0); el mar se genera en tiempo real.
+- Futurista: [*Panorama of Chongqing at night taken from Eling Park*](https://commons.wikimedia.org/wiki/File:Panorama_of_Chongqing_at_night_taken_from_Eling_Park.jpeg) y [*Panorama of Chongqing from tower in Eling park*](https://commons.wikimedia.org/wiki/File:Panorama_of_Chongqing_from_tower_in_Eling_park.jpg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- Postapocalíptico: [*Pripyat panorama 2009-001*](https://commons.wikimedia.org/wiki/File:Pripyat_panorama_2009-001.jpg), [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/); etalonada al anochecer y a una calima de día, sin el cielo original.
 - Luna: [*Apollo 17 Landing Site Panorama during EVA1*](https://commons.wikimedia.org/wiki/File:Apollo_17_Landing_Site_Panorama_during_EVA1_JSC2007e045384.jpg), NASA (dominio público). La Tierra: *Blue Marble* de NASA Visible Earth (dominio público).
 
 Estantería: inspirada en el sistema Vitsoe 606 (Dieter Rams, 1960); proyecto personal sin relación con Vitsoe.

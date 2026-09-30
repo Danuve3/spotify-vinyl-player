@@ -14,6 +14,10 @@ const RADIUS = 30000 // m: beyond this the photo's own horizon takes over
 const MOON_EL = THREE.MathUtils.degToRad(17)
 const MOON_AZ = THREE.MathUtils.degToRad(8)
 const MOON = new THREE.Vector3(Math.cos(MOON_EL) * Math.cos(MOON_AZ), Math.sin(MOON_EL), Math.cos(MOON_EL) * Math.sin(MOON_AZ))
+// And the sun in the day photo, a little higher and to the right
+const SUN_EL = THREE.MathUtils.degToRad(19)
+const SUN_AZ = THREE.MathUtils.degToRad(10)
+const SUN = new THREE.Vector3(Math.cos(SUN_EL) * Math.cos(SUN_AZ), Math.sin(SUN_EL), Math.cos(SUN_EL) * Math.sin(SUN_AZ))
 
 
 const oceanFragment = /* glsl */ `
@@ -21,20 +25,29 @@ const oceanFragment = /* glsl */ `
   uniform sampler2D uPhoto;
   uniform float uHalfSpan;
   uniform vec2 uElevation;
+  uniform sampler2D uPhotoDay;
+  uniform float uHalfSpanDay;
+  uniform vec2 uElevationDay;
   uniform vec3 uZenith;
   uniform vec3 uMoonDir;
+  uniform vec3 uSunDir;
   varying vec3 vDir;
 
-  // The sky in a direction: the photo where it covers it, the dome above
-  vec3 skyColour(vec3 r) {
+  // The sky in a direction from one photo: where it covers it, else the dome
+  vec3 photoSky(sampler2D tex, float halfSpan, vec2 elev, vec3 r, vec3 dome) {
     float az = atan(r.z, r.x);
     float el = asin(clamp(r.y, -1.0, 1.0));
-    vec2 uv = vec2(0.5 + az / (2.0 * uHalfSpan), (max(el, 0.004) - uElevation.x) / (uElevation.y - uElevation.x));
-    vec3 dome = mix(uHaze, uZenith, smoothstep(0.2, 0.9, r.y));
+    vec2 uv = vec2(0.5 + az / (2.0 * halfSpan), (max(el, 0.004) - elev.x) / (elev.y - elev.x));
     if (uv.x < 0.0 || uv.x > 1.0 || uv.y > 1.0) return dome;
-    vec3 photo = texture(uPhoto, uv, 1.5).rgb;
+    vec3 photo = texture(tex, uv, 1.5).rgb;
     float edge = smoothstep(0.0, 0.05, uv.x) * smoothstep(1.0, 0.95, uv.x) * (1.0 - smoothstep(0.9, 1.0, uv.y));
     return mix(dome, photo, edge);
+  }
+  vec3 skyColour(vec3 r) {
+    vec3 dome = mix(uHaze, uZenith, smoothstep(0.2, 0.9, r.y));
+    vec3 night = uDay < 0.999 ? photoSky(uPhoto, uHalfSpan, uElevation, r, dome) : dome;
+    vec3 day = uDay > 0.001 ? photoSky(uPhotoDay, uHalfSpanDay, uElevationDay, r, dome) : dome;
+    return mix(night, day, uDay);
   }
 
   // Swell: a few long directional waves plus finer chop, as slopes (dh/dx, dh/dz)
@@ -79,10 +92,12 @@ const oceanFragment = /* glsl */ `
 
     vec3 reflected = skyColour(r);
     // Moon glints on the facets turned just right
-    float glint = pow(max(dot(r, uMoonDir), 0.0), 900.0) * 6.0 + pow(max(dot(r, uMoonDir), 0.0), 90.0) * 0.08;
-    reflected += vec3(1.0, 0.97, 0.9) * glint * (1.0 - uRain * 0.9);
-    // Deep water: almost black, a hint of green-blue where waves face us
-    vec3 deep = vec3(0.0015, 0.004, 0.006) * (0.6 + 0.8 * max(n.x, 0.0));
+    // (the sun's by day, stronger and warmer)
+    vec3 light = normalize(mix(uMoonDir, uSunDir, uDay));
+    float glint = pow(max(dot(r, light), 0.0), 900.0) * mix(6.0, 30.0, uDay) + pow(max(dot(r, light), 0.0), 90.0) * mix(0.08, 0.6, uDay);
+    reflected += mix(vec3(1.0, 0.97, 0.9), vec3(1.0, 0.9, 0.7), uDay) * glint * (1.0 - uRain * 0.9);
+    // Deep water: almost black at night, a green-blue by day, lighter where waves face us
+    vec3 deep = mix(vec3(0.0015, 0.004, 0.006), vec3(0.02, 0.06, 0.08), uDay) * (0.6 + 0.8 * max(n.x, 0.0));
     vec3 col = mix(deep, reflected, fresnel);
 
     // Haze towards the horizon, like the photo's
@@ -111,7 +126,7 @@ const shipsVertex = /* glsl */ `
     p.y = -${EYE_HEIGHT.toFixed(1)} + position.y;
     p += vec3(-sin(az), 0.0, cos(az)) * position.x;
     float blink = aShip.w > 2.5 ? step(0.85, fract(uTime * 0.5 + aShip.x * 7.0)) : 1.0;
-    vColor = (aShip.w < 0.5 ? vec3(1.0, 0.92, 0.75) : aShip.w < 1.5 ? vec3(1.0, 0.1, 0.05) : aShip.w < 2.5 ? vec3(0.1, 1.0, 0.3) : vec3(1.0, 0.95, 0.9)) * 2.0 * blink * (1.0 - uRain * 0.8);
+    vColor = (aShip.w < 0.5 ? vec3(1.0, 0.92, 0.75) : aShip.w < 1.5 ? vec3(1.0, 0.1, 0.05) : aShip.w < 2.5 ? vec3(0.1, 1.0, 0.3) : vec3(1.0, 0.95, 0.9)) * 2.0 * blink * (1.0 - uRain * 0.8) * (1.0 - uDay * 0.9);
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
     gl_PointSize = blink < 0.5 ? 0.0 : clamp(3.0 * uUnit * uProj / -mv.z, 1.2, 4.0);
@@ -168,7 +183,7 @@ export function Ocean() {
     const sea = new THREE.Mesh(
       geo,
       new THREE.ShaderMaterial({
-        uniforms: { ...view, uMoonDir: { value: MOON } },
+        uniforms: { ...view, uMoonDir: { value: MOON }, uSunDir: { value: SUN } },
         vertexShader: dirVertex,
         fragmentShader: oceanFragment,
         side: THREE.BackSide,

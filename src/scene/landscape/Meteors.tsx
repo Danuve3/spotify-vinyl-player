@@ -38,7 +38,7 @@ const fragment = /* glsl */ `
       float bright = sin(p * 3.14159) * (0.3 + 0.7 * s);
       col += vec3(0.85, 0.9, 1.0) * bright * exp(-pow(dist / 0.0012, 2.0)) * 2.5;
     }
-    col *= 1.0 - uRain;
+    col *= (1.0 - uRain) * (1.0 - uDay);
     gl_FragColor = vec4(col, 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>

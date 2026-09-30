@@ -38,7 +38,7 @@ const fireVertex = /* glsl */ `
   varying float vSeed;
   void main() {
     vSeed = aFire.y;
-    vFlicker = 0.7 + 0.3 * noise(vec2(uTime * 6.0, aFire.y * 40.0)) + 0.2 * sin(uTime * 19.0 + aFire.y * 9.0);
+    vFlicker = (0.7 + 0.3 * noise(vec2(uTime * 6.0, aFire.y * 40.0)) + 0.2 * sin(uTime * 19.0 + aFire.y * 9.0)) * (1.0 - uDay * 0.55);
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
     gl_PointSize = clamp(aFire.x * vFlicker * uUnit * uProj / -mv.z, 2.0, 40.0);

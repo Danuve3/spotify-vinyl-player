@@ -177,7 +177,58 @@ def future():
     save("future", img, is_linear=False, half_span=65, el="see shader")
 
 
-JOBS = {"earth": earth, "countryside": countryside, "sea": sea, "wasteland": wasteland, "moon": moon, "future": future}
+def day_grade(lin, exposure, sat=1.0):
+    """Daylight: a plain exposure with the same filmic roll-off."""
+    x = lin * exposure
+    lum = (x * [0.2126, 0.7152, 0.0722]).sum(axis=2, keepdims=True)
+    return soft_clip(lum + (x - lum) * sat)
+
+
+def countryside_day():
+    # Clarens at midday (Poly Haven): same hills, facing the village
+    img = read_hdr("clarens_midday_16k.hdr")
+    band = equirect_band(img, 285 / 360, 75, -35, 62)
+    save("countryside-day", day_grade(band, 0.95), half_span=75, el=(-35, 62))
+
+
+def sea_day():
+    img = read_hdr("kloppenheim_06_puresky_8k.hdr")
+    band = equirect_band(img, 205 / 360, 75, -4, 70)
+    save("sea-sky-day", day_grade(band, 0.42), half_span=75, el=(-4, 70))
+
+
+def manhattan_day():
+    # Top of the Rock looking south, January 2026: the same view as the night
+    img = read_jpg("manhattan-day.jpg")
+    save("manhattan-day", img, is_linear=False, half_span=55, el=(-21.8, 22.2))
+
+
+def future_day():
+    # Chongqing from the tower in Eling Park, by day
+    img = read_jpg("chongqing-day.jpg")
+    save("future-day", img, is_linear=False, half_span=65, el=(-22.6, 16.4))
+
+
+def wasteland_day():
+    # Pripyat by day under a toxic haze: the same crop and sky cut as the
+    # night version (the fires and smoke sit on it), bleached and yellowed
+    img = srgb_to_linear(read_jpg("pripyat-2009.jpg"))
+    band = equirect_band(img, 0.705, 75, -40, 12, 0.545)
+    alpha = np.asarray(Image.open(OUT / "wasteland.webp").convert("RGBA").resize((band.shape[1], band.shape[0])))[..., 3] / 255
+    x = band * 0.85
+    lum = (x * [0.2126, 0.7152, 0.0722]).sum(axis=2, keepdims=True)
+    x = lum + (x - lum) * 0.35  # drained of colour
+    x = x * np.array([1.08, 1.0, 0.78])  # sickly yellow-brown haze
+    h = x.shape[0]
+    # Haze thickening towards the horizon (the top of this band)
+    depth = np.clip(1 - np.arange(h) / (h * 0.55), 0, 1)[:, None, None] ** 2
+    x = x * (1 - depth * 0.55) + np.array([0.32, 0.28, 0.2]) * depth * 0.55
+    save("wasteland-day", soft_clip(x), alpha=alpha, half_span=75, el=(-40, 12))
+
+
+JOBS = {"earth": earth, "countryside": countryside, "sea": sea, "wasteland": wasteland, "moon": moon, "future": future,
+        "countryside_day": countryside_day, "sea_day": sea_day, "manhattan_day": manhattan_day,
+        "future_day": future_day, "wasteland_day": wasteland_day}
 
 if __name__ == "__main__":
     for name in sys.argv[1:] or JOBS:

@@ -7,6 +7,7 @@ export const common = /* glsl */ `
   uniform float uTime;
   uniform vec3 uHaze;
   uniform float uRain; // 0..1, eased
+  uniform float uDay;  // 0 night .. 1 day, eased
 
   uint pcg(uint v) {
     uint s = v * 747796405u + 2891336453u;
@@ -64,7 +65,7 @@ export const skyFragment = /* glsl */ `
     if (h < 0.0) col = uHaze * 0.8;
 
     // Stars, only where the glow lets them through
-    float clear = smoothstep(0.25, 0.6, h + uMilky * 0.5) * (1.0 - uRain) * (1.0 - uSmoke);
+    float clear = smoothstep(0.25, 0.6, h + uMilky * 0.5) * (1.0 - uRain) * (1.0 - uSmoke) * (1.0 - uDay);
     vec3 sp = d * 380.0;
     float sr = hash(floor(sp));
     float star = step(1.0 - 0.0025 * max(uStars, 1.0), sr) * smoothstep(0.35, 0.05, length(fract(sp) - 0.5));
@@ -82,7 +83,7 @@ export const skyFragment = /* glsl */ `
 
     // Moon with halo
     float mc = dot(d, uMoon);
-    float moon = uMoonOn * (1.0 - uRain * 0.95); // hidden behind the rain clouds
+    float moon = uMoonOn * (1.0 - uRain * 0.95) * (1.0 - uDay); // hidden behind the rain clouds
     float disc = smoothstep(0.99988, 0.99992, mc);
     vec2 mp = (d - uMoon * mc).xy * 900.0;
     col += vec3(1.0, 0.96, 0.88) * disc * 3.0 * (0.82 + 0.18 * noise(mp * 0.9)) * moon;
@@ -95,6 +96,9 @@ export const skyFragment = /* glsl */ `
       float dens = smoothstep(0.5 - 0.35 * uRain, 0.85 - 0.2 * uRain, fbm(cp)) * smoothstep(0.02, 0.12, h) * (1.0 - smoothstep(0.5 + 0.4 * uRain, 0.95 + 0.05 * uRain, h));
       vec3 cloud = mix(uHaze * 1.5, uZenith * 2.5, smoothstep(0.05, 0.45, h));
       cloud += vec3(0.5, 0.55, 0.7) * pow(max(mc, 0.0), 30.0) * 0.2 * uMoonOn;
+      // By day: white, sunlit clouds (grey ones when it rains)
+      vec3 dayCloud = mix(uHaze, vec3(1.0), 0.55 - uRain * 0.35) * (1.0 - uRain * 0.35);
+      cloud = mix(cloud, dayCloud, uDay);
       col = mix(col, cloud, dens * 0.8 * uClouds);
     }
 
@@ -108,7 +112,8 @@ export const skyFragment = /* glsl */ `
       float billow = fbm(sp2 * 1.3 + warp * 1.6 + vec2(t * 1.7, -t * 0.6));
       float dens = smoothstep(0.25, 0.75, billow);
       vec3 under = uGlow * (0.35 + 1.4 * exp(-hh * 7.0)) * (0.55 + 0.45 * fbm(sp2 * 2.1 - t * 3.0));
-      vec3 smoke = mix(vec3(0.012, 0.009, 0.008), under, (1.0 - dens) * 0.6 + 0.4 * exp(-hh * 5.0));
+      vec3 base = mix(vec3(0.012, 0.009, 0.008), uHaze * 0.55, uDay);
+      vec3 smoke = mix(base, under, (1.0 - dens) * 0.6 + 0.4 * exp(-hh * 5.0));
       col = mix(col, smoke, uSmoke);
       // Lightning: a flicker that lights a patch of the clouds
       float lit = smoothstep(0.35, 0.95, fbm(sp2 * 0.5 + vec2(floor(uTime * 0.37) * 3.1, 1.7)));
@@ -123,27 +128,40 @@ export const skyFragment = /* glsl */ `
 
 export const photoFragment = /* glsl */ `
   ${common}
+  // Night photo and day photo, each with its own framing; faded by uDay
   uniform sampler2D uPhoto;
   uniform vec2 uPhotoSize;  // pixels
   uniform float uHalfSpan;  // azimuth half-width (rad) the photo covers
   uniform vec2 uElevation;  // elevation (rad) of the photo's bottom and top edges
   uniform float uExposure;
+  uniform float uMirror;    // below the photo: 1 = its foreground mirrored, 0 = a dark fill
+  uniform sampler2D uPhotoDay;
+  uniform vec2 uPhotoSizeDay;
+  uniform float uHalfSpanDay;
+  uniform vec2 uElevationDay;
+  uniform float uExposureDay;
+  uniform float uMirrorDay;
   uniform float uCity;      // lit windows that switch off and on, shimmering lights
   uniform float uWind;      // grass stirring in the foreground
   uniform float uFlash;     // lightning
   uniform vec4 uFires[8];   // (u, v from the top, radius in u, strength) lighting the ground
-  uniform float uMirror;    // below the photo: 1 = its foreground mirrored, 0 = a dark fill
   varying vec3 vDir;
 
-  void main() {
-    vec3 d = normalize(vDir);
+  struct Layer { vec3 col; float a; vec2 uv; bool inside; };
+
+  Layer photo(sampler2D tex, vec2 size, float halfSpan, vec2 elev, float exposure, float mirror, float city, vec3 d) {
+    Layer L;
+    L.col = vec3(0.0);
+    L.a = 0.0;
     float az = atan(d.z, d.x);           // 0 straight out of the glass, + to the right
     float el = asin(clamp(d.y, -1.0, 1.0));
-    vec2 uv = vec2(0.5 + az / (2.0 * uHalfSpan), (el - uElevation.x) / (uElevation.y - uElevation.x));
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y > 1.0) discard;
+    vec2 uv = vec2(0.5 + az / (2.0 * halfSpan), (el - elev.x) / (elev.y - elev.x));
+    L.uv = uv;
+    L.inside = !(uv.x < 0.0 || uv.x > 1.0 || uv.y > 1.0);
+    if (!L.inside) return L;
 
     // Wind through the grass: the nearer (lower) it is, the more it stirs
-    float horizon = -uElevation.x / (uElevation.y - uElevation.x);
+    float horizon = -elev.x / (elev.y - elev.x);
     if (uWind > 0.0 && uv.y < horizon) {
       float near = pow(1.0 - uv.y / horizon, 1.5);
       float gust = 0.5 + 0.5 * sin(uTime * 0.7 + uv.x * 9.0 - uTime * 0.35);
@@ -152,24 +170,53 @@ export const photoFragment = /* glsl */ `
     }
 
     // In the rain it all softens (wet air) and a little mist hangs over it
-    vec4 tex = texture(uPhoto, clamp(uv, vec2(0.0), vec2(1.0)), uRain * 0.7);
-    vec3 col = tex.rgb;
+    vec4 tex4 = texture(tex, clamp(uv, vec2(0.0), vec2(1.0)), uRain * 0.7);
+    vec3 col = tex4.rgb;
     col = mix(col, uHaze * 1.6, uRain * 0.12 * (0.4 + 0.6 * smoothstep(0.35, 0.7, uv.y)));
     float lum = dot(col, vec3(0.3, 0.59, 0.11));
-    vec2 px = uv * uPhotoSize;
 
-    if (uCity > 0.0) {
+    if (city > 0.0) {
       // Lit windows: a few switch off and on again every minute or so
-      vec2 cell = floor(px / vec2(4.0, 5.0));
+      vec2 cell = floor(uv * size / vec2(4.0, 5.0));
       float h = hash(vec3(cell, 3.0));
       if (lum > 0.28 && h < 0.05 && uv.y < 0.75) {
         float on = step(0.35, fract(uTime / (40.0 + h * 900.0) + h * 17.0));
-        col *= mix(0.3, 1.0, on);
+        col *= mix(1.0, mix(0.3, 1.0, on), city);
       }
       // Distant lights shimmer through the warm air near the horizon
       float far = smoothstep(horizon - 0.1, horizon + 0.05, uv.y) * (1.0 - smoothstep(horizon + 0.05, horizon + 0.11, uv.y));
-      col *= 1.0 + far * step(0.3, lum) * 0.18 * sin(uTime * (2.0 + h * 5.0) + h * 60.0);
+      col *= 1.0 + far * step(0.3, lum) * 0.18 * city * sin(uTime * (2.0 + h * 5.0) + h * 60.0);
     }
+
+    // Bright sources glow a little more so the bloom picks them up
+    col = col * exposure + pow(lum, 3.0) * col * 0.8 * (1.0 - uDay);
+
+    // Soft edges: the top and the sides melt into the sky dome
+    float a = tex4.a * (1.0 - smoothstep(0.9, 1.0, uv.y));
+    a *= smoothstep(0.0, 0.05, uv.x) * smoothstep(1.0, 0.95, uv.x);
+    if (uv.y < 0.0) {
+      // Below the photo: its foreground mirrored and softened, so the ground
+      // carries on (it is only seen looking steeply down), or a dark fill
+      vec3 ground = textureLod(tex, vec2(uv.x, min(-uv.y, 0.25)), 1.5 - uv.y * 12.0).rgb * exposure;
+      vec3 fill = textureLod(tex, vec2(uv.x, 0.02), 6.0).rgb * exposure * 0.5;
+      col = mix(fill, ground, mirror) * mix(0.6, 1.0, smoothstep(-0.3, 0.0, uv.y));
+    }
+    L.col = col;
+    L.a = a;
+    return L;
+  }
+
+  void main() {
+    vec3 d = normalize(vDir);
+    Layer n = photo(uPhoto, uPhotoSize, uHalfSpan, uElevation, uExposure, uMirror, uCity * (1.0 - uDay), d);
+    Layer y = n;
+    if (uDay > 0.001) y = photo(uPhotoDay, uPhotoSizeDay, uHalfSpanDay, uElevationDay, uExposureDay, uMirrorDay, 0.0, d);
+    if (!n.inside && !y.inside) discard;
+    // Cross-fade, weighting by coverage so a missing edge does not darken
+    float wn = n.a * (1.0 - uDay), wd = y.a * uDay;
+    float a = wn + wd;
+    vec3 col = a > 0.0001 ? (n.col * wn + y.col * wd) / a : vec3(0.0);
+    vec2 uv = n.uv;
 
     // Fires light up what is around them, flickering
     vec3 fireLight = vec3(0.0);
@@ -180,19 +227,14 @@ export const photoFragment = /* glsl */ `
       float fl = 0.75 + 0.25 * noise(vec2(uTime * 7.0, float(i) * 13.0)) + 0.15 * sin(uTime * 23.0 + float(i));
       fireLight += vec3(1.0, 0.42, 0.12) * f.w * fl * exp(-dot(dv, dv) / (f.z * f.z));
     }
-    col += col * fireLight * 6.0 + fireLight * 0.01;
+    col += (col * fireLight * 6.0 + fireLight * 0.01) * (1.0 - uDay * 0.8);
     // Lightning shows the ruins for an instant
     col += (col * 2.5 + 0.006) * uFlash * vec3(0.8, 0.85, 1.0);
-
-    // Bright sources glow a little more so the bloom picks them up
-    col = col * uExposure + pow(lum, 3.0) * col * 0.8;
-
-    // Soft edges: the top and the sides melt into the sky dome
-    float a = tex.a * (1.0 - smoothstep(0.9, 1.0, uv.y));
 
     // Smoke rising from each fire: a column of churning noise that widens and
     // drifts with the wind, lit orange at its foot
     float aspect = uPhotoSize.x / uPhotoSize.y;
+    float side = smoothstep(0.0, 0.05, uv.x) * smoothstep(1.0, 0.95, uv.x);
     for (int i = 0; i < 8; i++) {
       vec4 f = uFires[i];
       if (f.w <= 0.0) continue;
@@ -203,21 +245,15 @@ export const photoFragment = /* glsl */ `
       float t = uTime * 0.05 + float(i) * 7.3;
       vec2 q = vec2(x / width * 0.9, up * 9.0 - t * 5.0) + float(i) * 11.0;
       q += vec2(fbm(q * 0.7 + t), fbm(q * 0.7 - t + 4.1)) * 1.3;
-      float n = fbm(q);
+      float nn = fbm(q);
       float body = smoothstep(1.0, 0.25, abs(x) / width) * smoothstep(-0.02, 0.01, up) * (1.0 - smoothstep(0.35, 0.95, up));
-      float dens = smoothstep(0.3, 0.7, n) * body * (0.65 + f.w * 0.35);
-      vec3 smoke = mix(vec3(0.03, 0.022, 0.02), vec3(0.55, 0.2, 0.05), exp(-max(up, 0.0) * 30.0)) * (0.7 + 0.6 * n);
+      float dens = smoothstep(0.3, 0.7, nn) * body * (0.65 + f.w * 0.35) * side;
+      // Black smoke by day; lit orange from below at night
+      vec3 smoke = mix(vec3(0.03, 0.022, 0.02), vec3(0.55, 0.2, 0.05), exp(-max(up, 0.0) * 30.0) * (1.0 - uDay)) * (0.7 + 0.6 * nn);
+      smoke = mix(smoke, vec3(0.05, 0.045, 0.042) * (0.6 + 0.8 * nn), uDay * 0.7);
       smoke += vec3(0.25, 0.27, 0.35) * uFlash * 0.4;
       col = mix(col, smoke, dens);
       a = max(a, dens);
-    }
-    a *= smoothstep(0.0, 0.05, uv.x) * smoothstep(1.0, 0.95, uv.x);
-    if (uv.y < 0.0) {
-      // Below the photo: its foreground mirrored and softened, so the ground
-      // carries on (it is only seen looking steeply down)
-      vec3 ground = textureLod(uPhoto, vec2(uv.x, min(-uv.y, 0.25)), 1.5 - uv.y * 12.0).rgb * uExposure;
-      vec3 fill = textureLod(uPhoto, vec2(uv.x, 0.02), 6.0).rgb * uExposure * 0.5;
-      col = mix(fill, ground, uMirror) * mix(0.6, 1.0, smoothstep(-0.3, 0.0, uv.y));
     }
 
     gl_FragColor = vec4(col, a);
@@ -255,7 +291,7 @@ export const lightsVertex = /* glsl */ `
       float el = uElevation.x + (1.0 - uv.y) * (uElevation.y - uElevation.x);
       p = vec3(cos(el) * cos(az), sin(el), cos(el) * sin(az)) * uPhotoR;
       k = smoothstep(0.0, 0.06, t) * smoothstep(1.0, 0.85, t);
-      vColor = aColor * k;
+      vColor = aColor * k * (1.0 - uDay * 0.85);
       vec4 mv = modelViewMatrix * vec4(p, 1.0);
       gl_Position = projectionMatrix * mv;
       gl_PointSize = k <= 0.001 ? 0.0 : mix(aB.z, aB.w, t) * uProj / 800.0;
@@ -274,7 +310,7 @@ export const lightsVertex = /* glsl */ `
       p.xz += dir * position.z;
       k = position.y > 0.5 ? step(0.92, fract(uTime * 0.9 + position.x * 0.01)) * 2.5 : 1.0;
     }
-    vColor = aColor * k;
+    vColor = aColor * k * (1.0 - uDay * 0.85);
     vec4 mv = modelViewMatrix * vec4(p, 1.0);
     gl_Position = projectionMatrix * mv;
     gl_PointSize = k <= 0.001 ? 0.0 : clamp(size * uUnit * uProj / -mv.z, 1.2, 16.0);

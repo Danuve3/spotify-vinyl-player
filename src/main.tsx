@@ -5,9 +5,11 @@ import './styles.css'
 import { useDeck } from './deck/store'
 import { useQuality } from './scene/quality'
 import { useLandscape } from './scene/landscape/landscapes'
+import { useDaytime } from './scene/daytime'
+import { useLamp } from './scene/lamp'
 import { preloadGrooves } from './vinyl/textures'
 
-if (import.meta.env.DEV) Object.assign(window, { __deck: useDeck, __quality: useQuality, __landscape: useLandscape })
+if (import.meta.env.DEV) Object.assign(window, { __deck: useDeck, __quality: useQuality, __landscape: useLandscape, __day: useDaytime, __lamp: useLamp })
 
 preloadGrooves()
 
