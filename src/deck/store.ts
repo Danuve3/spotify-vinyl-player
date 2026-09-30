@@ -34,10 +34,18 @@ interface DeckState {
   contact: boolean
   /** Platter has reached the selected speed (set by the rig). */
   atSpeed: boolean
+  /**
+   * Where the picked sleeve was lifted from (world position + quaternion), so
+   * it can be carried to the stand. `watch` = keep the camera on the flight.
+   */
+  pickedFrom: { pos: [number, number, number]; quat: [number, number, number, number]; watch: boolean } | null
   message: string | null
 
+  /** A view the user chose (buttons, keys): always obeyed. */
   setFocus: (f: Focus) => void
-  pickAlbum: (album: Album) => Promise<void>
+  /** A view an action suggests (picking, taking a record…): ignored in the free camera. */
+  followFocus: (f: Focus) => void
+  pickAlbum: (album: Album, from?: DeckState['pickedFrom']) => Promise<void>
   returnAlbum: () => void
   takeVinyl: () => void
   flipVinyl: () => void
@@ -71,11 +79,15 @@ export const useDeck = create<DeckState>((set, get) => ({
   stylusRadius: null,
   contact: false,
   atSpeed: false,
+  pickedFrom: null,
   message: null,
 
   setFocus: (focus) => set({ focus }),
+  followFocus: (focus) => {
+    if (get().focus !== 'free') set({ focus })
+  },
 
-  pickAlbum: async (picked) => {
+  pickAlbum: async (picked, from = null) => {
     const { vinyl, album: current } = get()
     if (current && vinyl !== 'sleeve') {
       return set({ message: 'Guarda primero el disco que tienes fuera' })
@@ -83,7 +95,17 @@ export const useDeck = create<DeckState>((set, get) => ({
     try {
       // Search results and saved albums may carry a partial tracklist
       const album = picked.id.startsWith('demo') ? picked : await getAlbum(picked.id)
-      set({ album, sides: splitIntoSides(album), sideIndex: 0, vinyl: 'sleeve', focus: 'deck', message: null })
+      // With a known origin the deck carries the sleeve over and moves the
+      // camera itself once it has landed (or right away, if `watch` is off)
+      set({
+        album,
+        sides: splitIntoSides(album),
+        sideIndex: 0,
+        vinyl: 'sleeve',
+        pickedFrom: from,
+        message: null,
+        ...(from || get().focus === 'free' ? {} : { focus: 'deck' as const }),
+      })
     } catch (e) {
       set({ message: (e as Error).message })
     }
@@ -91,7 +113,8 @@ export const useDeck = create<DeckState>((set, get) => ({
 
   returnAlbum: () => {
     if (get().vinyl !== 'sleeve') return
-    set({ album: null, sides: [], focus: 'crate' })
+    set({ album: null, sides: [] })
+    get().followFocus('crate')
   },
 
   takeVinyl: () => {
@@ -103,7 +126,8 @@ export const useDeck = create<DeckState>((set, get) => ({
     if (vinyl === 'platter' && !get().lidOpen) return set({ message: 'Abre la tapa' })
     deckAudio().resume()
     // From the sleeve the camera waits for the record to come out (see Deck)
-    set({ vinyl: 'hand', message: null, ...(vinyl === 'sleeve' ? {} : { focus: 'deck' as const }) })
+    set({ vinyl: 'hand', message: null })
+    if (vinyl !== 'sleeve') get().followFocus('deck')
   },
 
   flipVinyl: () => {

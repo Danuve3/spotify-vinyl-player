@@ -46,7 +46,17 @@ function rng(seed: number) {
 }
 
 /** Average colour of an album cover, leaning towards its saturated tones. */
+const colourCache = new Map<string, Promise<THREE.Color>>()
 function coverColour(url: string, done: (c: THREE.Color) => void) {
+  let p = colourCache.get(url)
+  if (!p) {
+    p = new Promise((resolve) => measureCover(url, resolve))
+    colourCache.set(url, p)
+  }
+  void p.then((c) => done(c.clone()))
+}
+
+function measureCover(url: string, done: (c: THREE.Color) => void) {
   const img = new Image()
   img.crossOrigin = 'anonymous'
   img.onload = () => {
@@ -175,8 +185,12 @@ interface Props {
 export function Shelf({ albums }: Props) {
   const record = useGLTF(RECORD_URL)
   const decorGltf = useGLTF(DECOR_URL)
+  // The whole library, including the record on the stand: the shelf must not
+  // rebuild when an album is picked (the taken spine is hidden instead)
+  const shown = albums
   const current = useDeck((s) => s.album)
-  const shown = useMemo(() => albums.filter((a) => a.id !== current?.id), [albums, current])
+  const taken = useRef<number | null>(null)
+  const refresh = useRef(new Set<number>())
   const hover = useRef<number | null>(null)
 
   const mats = useMemo(
@@ -253,14 +267,16 @@ export function Shelf({ albums }: Props) {
     const first = !mesh.userData.placed
     slots.forEach((slot, i) => {
       // Only records that are sliding out or back need a new matrix
-      const target = hover.current === i ? PULL : 0
+      const target = hover.current === i && taken.current !== i ? PULL : 0
       const cur = pull.current[i] ?? 0
       const next = Math.abs(target - cur) < 1e-4 ? target : THREE.MathUtils.damp(cur, target, 14, dt)
-      if (!first && next === cur) return
+      if (!first && next === cur && !refresh.current.has(i)) return
+      refresh.current.delete(i)
       pull.current[i] = next
       tmp.q.setFromAxisAngle(tmp.z, slot.rot)
       tmp.p.copy(slot.base).add(new THREE.Vector3(0, 0, -next))
-      mesh.setMatrixAt(i, slot.matrix.compose(tmp.p, tmp.q, tmp.s.set(slot.thick, SLEEVE, SLEEVE)))
+      const scale = taken.current === i ? 0 : 1
+      mesh.setMatrixAt(i, slot.matrix.compose(tmp.p, tmp.q, tmp.s.set(slot.thick * scale, SLEEVE * scale, SLEEVE * scale)))
       dirty = true
     })
     if (dirty) {
@@ -284,10 +300,27 @@ export function Shelf({ albums }: Props) {
     if (e.instanceId === undefined) return
     const deck = useDeck.getState()
     // First click brings the shelf into view, like the crate
-    if (deck.focus !== 'shelf' && deck.focus !== 'free') return deck.setFocus('shelf')
-    const album = spines.slots[e.instanceId]?.album
-    if (album) deck.pickAlbum(album)
+    if (deck.focus !== 'shelf' && deck.focus !== 'free') return deck.followFocus('shelf')
+    const slot = spines.slots[e.instanceId]
+    if (!slot) return
+    // Carry this record's sleeve from the shelf to the stand; the camera turns
+    // round to the deck at once (the stand is behind the viewer here)
+    const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI / 2, Math.PI / 2, slot.rot, 'YXZ'))
+    deck.pickAlbum(slot.album, { pos: slot.base.toArray(), quat: quat.toArray() as [number, number, number, number], watch: false })
+    takeSpine(e.instanceId)
   }
+  const takeSpine = (i: number | null) => {
+    const prev = taken.current
+    taken.current = i
+    // Rewrite those two matrices next frame
+    for (const k of [prev, i]) if (k !== null) refresh.current.add(k)
+  }
+  // Put the spine back once another album (or none) is on the stand
+  useEffect(() => {
+    const t = taken.current
+    if (t !== null && spines.slots[t]?.album.id !== current?.id) takeSpine(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, spines])
 
   // --- three covers on display, leaning on the wall ---
   const covers = useMemo(() => {
@@ -436,8 +469,10 @@ export function Shelf({ albums }: Props) {
           onClick={(e: ThreeEvent<MouseEvent>) => {
             e.stopPropagation()
             const deck = useDeck.getState()
-            if (deck.focus !== 'shelf' && deck.focus !== 'free') return deck.setFocus('shelf')
-            deck.pickAlbum(album)
+            if (deck.focus !== 'shelf' && deck.focus !== 'free') return deck.followFocus('shelf')
+            const pos = object.getWorldPosition(new THREE.Vector3())
+            const quat = object.getWorldQuaternion(new THREE.Quaternion())
+            deck.pickAlbum(album, { pos: pos.toArray(), quat: quat.toArray() as [number, number, number, number], watch: false })
           }}
           onPointerOver={(e: ThreeEvent<PointerEvent>) => {
             e.stopPropagation()

@@ -42,7 +42,7 @@ export function Search({ onAdd }: { onAdd: (album: Album) => void }) {
                   onAdd(a)
                   setResults([])
                   setQuery('')
-                  useDeck.getState().setFocus('crate')
+                  useDeck.getState().followFocus('crate')
                 }}
               >
                 <img src={a.coverUrl} alt="" />

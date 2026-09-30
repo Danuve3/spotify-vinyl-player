@@ -38,6 +38,37 @@ function grooves(ctx: CanvasRenderingContext2D, rOuter: number, rInner: number, 
   }
 }
 
+// The groove pattern is the same on every record: draw it once (in idle
+// time, see preloadGrooves) and clip it to each side's grooved band.
+let grooveLayer: HTMLCanvasElement | null = null
+function getGrooveLayer() {
+  if (!grooveLayer) {
+    const [c, ctx] = canvas()
+    grooves(ctx, R_DISC, R_LABEL, 14, 6)
+    grooveLayer = c
+  }
+  return grooveLayer
+}
+
+/** Draws the shared groove layer ahead of time so picking a record never stalls. */
+export function preloadGrooves() {
+  const idle = (window as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 1500))
+  idle(() => getGrooveLayer())
+}
+
+function clippedGrooves(ctx: CanvasRenderingContext2D, rOuter: number, rInner: number) {
+  const c = SIZE / 2
+  ctx.save()
+  ctx.beginPath()
+  ctx.arc(c, c, px(rOuter), 0, Math.PI * 2)
+  ctx.arc(c, c, px(rInner), 0, Math.PI * 2, true)
+  ctx.clip()
+  ctx.drawImage(getGrooveLayer(), 0, 0)
+  ctx.restore()
+}
+
+const nextFrame = () => new Promise<void>((r) => requestAnimationFrame(() => r()))
+
 function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
@@ -107,7 +138,7 @@ export async function createSideTextures(
   color.fillStyle = '#070707'
   color.fillRect(0, 0, SIZE, SIZE)
   ring(color, R_DISC, R_LEAD_IN, '#0b0b0b')
-  grooves(color, R_LEAD_IN, end, 14, 6)
+  clippedGrooves(color, R_LEAD_IN, end)
   for (let i = 1; i < side.bands.length; i++) {
     ring(color, side.bands[i - 1].rEnd, side.bands[i].rStart, '#050505')
   }
@@ -115,6 +146,7 @@ export async function createSideTextures(
   ring(color, R_LEAD_OUT + 0.0004, R_LEAD_OUT, '#151515') // locked groove
   ring(color, R_LEAD_OUT, R_LABEL, '#080808')
   drawLabel(color, cover, side, title, artist)
+  await nextFrame() // spread the work over two frames
 
   // Roughness (green channel as three.js reads it): gaps are glossy mirrors
   rough.fillStyle = 'rgb(0,90,0)'
@@ -131,7 +163,10 @@ export async function createSideTextures(
   map.flipY = false
   map.colorSpace = THREE.SRGBColorSpace
   map.anisotropy = 8
-  const roughnessMap = new THREE.CanvasTexture(roughC)
+  // Roughness carries no fine detail: half resolution quarters its upload
+  const [smallC, small] = canvas(SIZE / 2)
+  small.drawImage(roughC, 0, 0, SIZE / 2, SIZE / 2)
+  const roughnessMap = new THREE.CanvasTexture(smallC)
   roughnessMap.flipY = false
   roughnessMap.anisotropy = 8
   return { map, roughnessMap }

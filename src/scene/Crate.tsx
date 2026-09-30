@@ -36,10 +36,14 @@ export function Crate({ albums }: Props) {
   const shown = albums.filter((a) => a.id !== current?.id).slice(0, MAX_RECORDS)
 
   // One sleeve per album: clones share geometry, only the front artwork differs.
-  // The sleeve is multi-material, so glTF gives us a group of meshes.
+  // The sleeve is multi-material, so glTF gives us a group of meshes. Built
+  // once per album and kept, so picking a record does not rebuild the crate.
+  const cache = useMemo(() => new Map<string, THREE.Object3D>(), [])
   const sleeves = useMemo(() => {
     const template = record.scene.getObjectByName('Sleeve')!
     return shown.map((album) => {
+      const cached = cache.get(album.id)
+      if (cached) return { album, object: cached }
       const clone = template.clone(true)
       clone.traverse((o) => {
         const mesh = o as THREE.Mesh
@@ -55,10 +59,11 @@ export function Crate({ albums }: Props) {
       clone.position.set(0, 0, 0)
       clone.rotation.set(0, 0, 0)
       clone.visible = true // the deck hides the template while no album is picked
+      cache.set(album.id, clone)
       return { album, object: clone }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shown.map((a) => a.id).join(), record.scene])
+  }, [shown.map((a) => a.id).join(), record.scene, cache])
 
   useFrame((_, dt) => {
     const g = group.current
@@ -78,11 +83,15 @@ export function Crate({ albums }: Props) {
     setCursor((c) => THREE.MathUtils.clamp(c + Math.sign(e.deltaY), 0, Math.max(0, shown.length - 1)))
   }
 
-  const pick = (e: ThreeEvent<MouseEvent>, album: Album) => {
+  const pick = (e: ThreeEvent<MouseEvent>, album: Album, object: THREE.Object3D) => {
     e.stopPropagation()
     const deck = useDeck.getState()
-    if (deck.focus !== 'crate') return deck.setFocus('crate')
-    deck.pickAlbum(album)
+    // First click brings the crate into view (in the free camera, it just picks)
+    if (deck.focus !== 'crate' && deck.focus !== 'free') return deck.followFocus('crate')
+    // The deck lifts this very sleeve out of the crate and onto the stand
+    const pos = object.getWorldPosition(new THREE.Vector3())
+    const quat = object.getWorldQuaternion(new THREE.Quaternion())
+    deck.pickAlbum(album, { pos: pos.toArray(), quat: quat.toArray() as [number, number, number, number], watch: true })
   }
 
   return (
@@ -102,7 +111,7 @@ export function Crate({ albums }: Props) {
             setHover((h) => (h === i ? null : h))
             document.body.style.cursor = ''
           }}
-          onClick={(e: ThreeEvent<MouseEvent>) => pick(e, album)}
+          onClick={(e: ThreeEvent<MouseEvent>) => pick(e, album, object)}
         />
       ))}
     </group>

@@ -10,3 +10,6 @@ dist
 *.blend1
 blender/*_bake.png
 public/models/lightmaps/*.png
+
+# Source media kept out of the repo (large originals)
+sources/

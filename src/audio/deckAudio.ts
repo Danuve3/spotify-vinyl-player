@@ -1,6 +1,8 @@
-// Procedural turntable sounds layered over Spotify (whose DRM audio we cannot
-// process). Everything is synthesised, so there are no audio assets to load.
+// Turntable sounds layered over Spotify (whose DRM audio we cannot process).
+// The surface crackle is a recorded loop; everything else is synthesised.
 
+const CRACKLE_URL = `${import.meta.env.BASE_URL}audio/crackle.mp3`
+const CRACKLE_LEVEL = 1 // its loudest pops reach ~0.56, like the old synthesised ones
 const RPM = 33.333
 const REV_S = 60 / RPM
 
@@ -17,7 +19,6 @@ export class DeckAudio {
   private surface: GainNode // groove noise + crackle, only while the stylus is down
   private motor: GainNode
   private runOutTimer: number | null = null
-  private crackle: AudioBuffer
   private hiss: AudioBuffer
 
   constructor() {
@@ -26,22 +27,12 @@ export class DeckAudio {
     this.master.gain.value = 0.9
     this.master.connect(this.ctx.destination)
 
-    // Sparse crackle: random impulses with varied size and a soft tail, looped
-    // over one revolution-ish length so it does not sound mechanical.
-    this.crackle = noiseBuffer(this.ctx, 7.3, (i, rate) => {
-      const t = i / rate
-      const pop = Math.random() < 0.00018 ? (Math.random() * 2 - 1) * (0.3 + Math.random() * 0.7) : 0
-      const tick = Math.random() < 0.0012 ? (Math.random() * 2 - 1) * 0.12 : 0
-      // Faint once-per-revolution scratch
-      const scratch = Math.abs((t % REV_S) - 0.9) < 0.004 ? (Math.random() * 2 - 1) * 0.25 : 0
-      return pop + tick + scratch
-    })
     this.hiss = noiseBuffer(this.ctx, 4, () => Math.random() * 2 - 1)
 
     this.surface = this.ctx.createGain()
     this.surface.gain.value = 0
     this.surface.connect(this.master)
-    this.loop(this.crackle, this.surface, 0.55, { type: 'highpass', freq: 900 })
+    void this.loadCrackle()
     this.loop(this.hiss, this.surface, 0.018, { type: 'bandpass', freq: 5000, q: 0.4 })
     // Low groove rumble modulated at the rotation rate
     const rumble = this.loop(this.hiss, this.surface, 0.05, { type: 'lowpass', freq: 90 })
@@ -63,6 +54,26 @@ export class DeckAudio {
       gain.gain.value = g
       osc.connect(gain).connect(this.motor)
       osc.start()
+    }
+  }
+
+  /** Recorded surface noise: a 48 s seamless loop, played from a random point. */
+  private async loadCrackle() {
+    try {
+      const res = await fetch(CRACKLE_URL)
+      const buffer = await this.ctx.decodeAudioData(await res.arrayBuffer())
+      const src = this.ctx.createBufferSource()
+      src.buffer = buffer
+      src.loop = true
+      // Skip the MP3 encoder padding at both ends so the loop has no gap
+      src.loopStart = 0.05
+      src.loopEnd = buffer.duration - 0.05
+      const gain = this.ctx.createGain()
+      gain.gain.value = CRACKLE_LEVEL
+      src.connect(gain).connect(this.surface)
+      src.start(0, 0.05 + Math.random() * (buffer.duration - 0.2))
+    } catch {
+      // No crackle then; the groove hiss and rumble still play
     }
   }
 

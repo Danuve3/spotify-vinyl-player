@@ -42,6 +42,8 @@ interface Poses {
   /** Lifted clear of the sleeve and the plinth. */
   lifted: THREE.Vector3
   vinylBottomY: number
+  /** The sleeve and inner paper, standing on the "now playing" stand. */
+  stand: THREE.Group
 }
 
 function byName(root: THREE.Object3D): Nodes {
@@ -98,6 +100,7 @@ const ARM_PARTS = ['Tonearm_Tube', 'Headshell', 'Finger_Lift', 'Cartridge', 'Ton
 
 export function Deck() {
   const viewer = useThree((st) => st.camera)
+  const gl = useThree((st) => st.gl)
   const deckGltf = useGLTF(TURNTABLE_URL)
   const recordGltf = useGLTF(RECORD_URL)
   const n = useMemo(() => byName(deckGltf.scene), [deckGltf.scene])
@@ -107,6 +110,14 @@ export function Deck() {
   const leadInYaw = useRef(0)
   const s = useRef({ omega: 0, yaw: 0, lift: 0, lid: 0, start: 0, speedKnob: 0, cue: 0, flip: 0, handBlend: 0, onPlatter: 0 })
   const dragging = useRef(false)
+  const flight = useRef({
+    album: null as string | null,
+    t: 1,
+    duration: 1.2,
+    watch: true,
+    from: new THREE.Vector3(),
+    fromQ: new THREE.Quaternion(),
+  })
 
   // Poses for the vinyl, captured once from the Blender layout
   const poses = useMemo(() => {
@@ -150,7 +161,7 @@ export function Deck() {
     holder.position.copy(inSleeve)
     holder.quaternion.copy(inSleeveQ)
     holder.userData.phase = 'in'
-    const result: Poses = { holder, onPlatterLocal, inSleeve, inSleeveQ, slidOut, lifted, vinylBottomY }
+    const result: Poses = { holder, onPlatterLocal, inSleeve, inSleeveQ, slidOut, lifted, vinylBottomY, stand }
     recordGltf.scene.userData.poses = result
     return result
   }, [r, n, recordGltf.scene])
@@ -200,6 +211,33 @@ export function Deck() {
     for (const side of ['Vinyl_SideA', 'Vinyl_SideB']) {
       upgrade(recordGltf.scene, side, { clearcoat: 0.4, clearcoatRoughness: 0.25, anisotropy: 0.9, anisotropyMap: aniso })
     }
+    // Placeholder maps, so the shaders the picked album needs are compiled
+    // now, at load, and not in the middle of the sleeve's flight
+    // (same colour spaces as the real ones, or three.js builds new programs)
+    const blank = (colorSpace: THREE.ColorSpace, v = 200) => {
+      const t = new THREE.DataTexture(new Uint8Array([v, v, v, 255]), 1, 1)
+      t.colorSpace = colorSpace
+      t.flipY = false
+      t.needsUpdate = true
+      return t
+    }
+    const srgb = blank(THREE.SRGBColorSpace)
+    const linearBlank = blank(THREE.NoColorSpace)
+    const vinylBlank = blank(THREE.SRGBColorSpace, 9) // plain black vinyl until its faces are drawn
+    for (const name of ['Sleeve_Front', 'Sleeve_Back']) {
+      for (const m of materialsNamed(recordGltf.scene, name)) if (!m.map) finishSleeve(m, srgb)
+    }
+    for (const name of ['Vinyl_SideA', 'Vinyl_SideB']) {
+      for (const m of materialsNamed(recordGltf.scene, name)) {
+        const phys = m as unknown as THREE.MeshPhysicalMaterial
+        // The glTF may already carry a map: check each slot on its own
+        phys.map ??= vinylBlank
+        phys.roughnessMap ??= linearBlank
+        phys.color.set('#ffffff')
+        phys.roughness = 1
+        phys.needsUpdate = true
+      }
+    }
   }, [deckGltf.scene, recordGltf.scene, n, poses])
 
   // --- record set: vinyl + sleeves with the current album's artwork ---
@@ -222,32 +260,50 @@ export function Deck() {
     if (!album) return
     let cancelled = false
     const disposables: THREE.Texture[] = []
-    Promise.all(
-      [sides[record * 2], sides[record * 2 + 1]].map((side) =>
-        side ? createSideTextures(side, album.coverUrl, album.name, album.artist) : Promise.resolve(null),
-      ),
-    ).then((tex) => {
+    const frame = () => new Promise<void>((r) => requestAnimationFrame(() => r()))
+    ;(async () => {
+      // The record is hidden in its sleeve while the sleeve flies to the stand:
+      // draw its faces once it has landed, so the flight stays smooth
+      // (the flight itself starts on the next frame, in the render loop)
+      await frame()
+      await frame()
+      while (!cancelled && flight.current.t < 1) await frame()
+      // ...and after the camera has glided over to the deck, unless the
+      // record is being taken out already
+      const settle = performance.now() + 1800
+      while (!cancelled && performance.now() < settle && poses.holder.userData.phase === 'in') await frame()
+      const tex: (Awaited<ReturnType<typeof createSideTextures>> | null)[] = []
+      for (const side of [sides[record * 2], sides[record * 2 + 1]]) {
+        tex.push(side ? await createSideTextures(side, album.coverUrl, album.name, album.artist) : null)
+        await frame()
+      }
       if (cancelled) return
+      // Upload one texture per frame rather than four in a single frame
+      for (const t of tex) {
+        if (!t) continue
+        disposables.push(t.map, t.roughnessMap)
+        for (const texture of [t.map, t.roughnessMap]) {
+          gl.initTexture(texture)
+          await frame()
+          if (cancelled) return
+        }
+      }
       // Looked up here so we get the physical materials created at setup
       const [a] = materialsNamed(recordGltf.scene, 'Vinyl_SideA')
       const [b] = materialsNamed(recordGltf.scene, 'Vinyl_SideB')
       ;[a, b].forEach((mat, i) => {
         const t = tex[i]
         if (!t) return
-        disposables.push(t.map, t.roughnessMap)
         const phys = mat as unknown as THREE.MeshPhysicalMaterial
         phys.map = t.map
         phys.roughnessMap = t.roughnessMap
-        phys.color.set('#ffffff')
-        phys.roughness = 1
-        phys.needsUpdate = true
       })
-    })
+    })()
     return () => {
       cancelled = true
       disposables.forEach((t) => t.dispose())
     }
-  }, [album, sides, record, recordGltf.scene])
+  }, [album, sides, record, recordGltf.scene, gl])
 
   // --- per-frame animation ---
   const tmp = useMemo(
@@ -348,8 +404,45 @@ export function Deck() {
 
     // --- Vinyl: sleeve -> hand -> platter ---
     const holder = poses.holder
-    holder.visible = !!st.album
-    r.Sleeve.visible = r.Inner_Sleeve.visible = !!st.album
+    const stand = poses.stand
+    // With no album the set is shrunk away rather than hidden, so its shaders
+    // are compiled up front (hidden objects are skipped by the renderer)
+    const present = st.album ? 1 : 1e-5
+    holder.scale.setScalar(present)
+    stand.scale.setScalar(present)
+
+    // A newly picked sleeve is carried from where it was taken to the stand
+    const fl = flight.current
+    if (st.album?.id !== fl.album) {
+      fl.album = st.album?.id ?? null
+      const from = st.pickedFrom
+      if (st.album && from) {
+        fl.from.fromArray(from.pos)
+        fl.fromQ.fromArray(from.quat)
+        const dist = fl.from.distanceTo(poses.inSleeve)
+        fl.duration = THREE.MathUtils.clamp(0.7 + dist * 0.35, 1, 1.8)
+        fl.watch = from.watch
+        fl.t = 0
+        if (!from.watch) st.followFocus('deck')
+      } else fl.t = 1
+    }
+    if (fl.t < 1) {
+      fl.t = Math.min(1, fl.t + dt / fl.duration)
+      const e = THREE.MathUtils.smootherstep(fl.t, 0, 1)
+      // Up out of the crate / off the shelf, over and down onto the stand
+      const lift = 0.14 + fl.from.distanceTo(poses.inSleeve) * 0.12
+      tmp.pos.lerpVectors(fl.from, poses.inSleeve, 0.5).y += lift
+      const a = fl.from.clone().lerp(tmp.pos, e)
+      const b = tmp.pos.clone().lerp(poses.inSleeve, e)
+      stand.position.copy(a.lerp(b, e))
+      stand.quaternion.slerpQuaternions(fl.fromQ, poses.inSleeveQ, THREE.MathUtils.smootherstep(fl.t, 0.05, 0.85))
+      if (fl.t >= 1) {
+        stand.position.copy(poses.inSleeve)
+        stand.quaternion.copy(poses.inSleeveQ)
+        deckAudio().sleeveSlide(0.16, true) // settles into the groove of the stand
+        if (fl.watch) st.followFocus('deck')
+      }
+    }
     v.flip = damp(v.flip, sideIndex % 2 ? Math.PI : 0, 6, dt)
 
     // Target transform for each place
@@ -385,9 +478,9 @@ export function Deck() {
     }
     switch (ud.phase) {
       case 'in':
-        holder.position.copy(poses.inSleeve)
-        holder.quaternion.copy(poses.inSleeveQ)
-        if (!wantSleeve) {
+        holder.position.copy(stand.position)
+        holder.quaternion.copy(stand.quaternion)
+        if (!wantSleeve && fl.t >= 1) {
           ud.phase = 'sliding-out'
           ud.slide = 0
           deckAudio().sleeveSlide(SLIDE_OUT_S)
@@ -405,7 +498,7 @@ export function Deck() {
         if (approach(poses.lifted, poses.inSleeveQ, 7)) {
           ud.phase = 'free'
           // The camera follows the record to the deck once it is out
-          if (st.focus !== 'deck' && st.focus !== 'free') st.setFocus('deck')
+          if (st.focus !== 'deck') st.followFocus('deck')
         }
         break
       case 'free':
