@@ -2,7 +2,7 @@
 // The surface crackle is a recorded loop; everything else is synthesised.
 
 const CRACKLE_URL = `${import.meta.env.BASE_URL}audio/crackle.mp3`
-const CRACKLE_LEVEL = 1 // its loudest pops reach ~0.56, like the old synthesised ones
+const CRACKLE_LEVEL = 0.75 // its loudest pops reach ~0.42
 const RPM = 33.333
 const REV_S = 60 / RPM
 

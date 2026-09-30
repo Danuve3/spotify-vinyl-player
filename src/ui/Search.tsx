@@ -28,7 +28,7 @@ export function Search({ onAdd }: { onAdd: (album: Album) => void }) {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={busy ? 'Buscando…' : 'Buscar un disco para la caja…'}
+          placeholder={busy ? 'Buscando…' : 'Buscar un disco…'}
           aria-label="Buscar álbum"
         />
       </form>
@@ -39,10 +39,11 @@ export function Search({ onAdd }: { onAdd: (album: Album) => void }) {
               <button
                 className="search__item"
                 onClick={() => {
+                  // Kept in the collection, but it goes straight onto the stand
                   onAdd(a)
                   setResults([])
                   setQuery('')
-                  useDeck.getState().followFocus('crate')
+                  void useDeck.getState().pickAlbum(a)
                 }}
               >
                 <img src={a.coverUrl} alt="" />

@@ -13,7 +13,10 @@ export type ArmState =
   | 'down' // stylus in the groove
   | 'auto-in' // automatic cueing to the lead-in
   | 'auto-return' // automatic return to the rest
-export type Focus = 'room' | 'crate' | 'deck' | 'window' | 'chair' | 'shelf' | 'free'
+export type Focus = 'room' | 'crate' | 'deck' | 'both' | 'window' | 'chair' | 'shelf' | 'free'
+
+/** Views an action never moves away from: free camera, crate + deck together. */
+const keepsFocus = (f: Focus) => f === 'free' || f === 'both'
 
 interface DeckState {
   focus: Focus
@@ -43,7 +46,7 @@ interface DeckState {
 
   /** A view the user chose (buttons, keys): always obeyed. */
   setFocus: (f: Focus) => void
-  /** A view an action suggests (picking, taking a record…): ignored in the free camera. */
+  /** A view an action suggests (picking, taking a record…): ignored in the free and crate + deck views. */
   followFocus: (f: Focus) => void
   pickAlbum: (album: Album, from?: DeckState['pickedFrom']) => Promise<void>
   returnAlbum: () => void
@@ -84,7 +87,7 @@ export const useDeck = create<DeckState>((set, get) => ({
 
   setFocus: (focus) => set({ focus }),
   followFocus: (focus) => {
-    if (get().focus !== 'free') set({ focus })
+    if (!keepsFocus(get().focus)) set({ focus })
   },
 
   pickAlbum: async (picked, from = null) => {
@@ -104,7 +107,7 @@ export const useDeck = create<DeckState>((set, get) => ({
         vinyl: 'sleeve',
         pickedFrom: from,
         message: null,
-        ...(from || get().focus === 'free' ? {} : { focus: 'deck' as const }),
+        ...(from || keepsFocus(get().focus) ? {} : { focus: 'deck' as const }),
       })
     } catch (e) {
       set({ message: (e as Error).message })

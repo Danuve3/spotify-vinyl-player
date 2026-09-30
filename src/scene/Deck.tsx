@@ -5,9 +5,10 @@ import * as THREE from 'three'
 import { useDeck } from '../deck/store'
 import { measureArm, radiusAtYaw, yawForRadius, type ArmGeometry } from '../deck/tonearm'
 import { circularAnisotropyMap, createSideTextures } from '../vinyl/textures'
-import { backCoverTexture, coverTexture, finishSleeve } from '../vinyl/sleeveTextures'
+import { backCoverTexture, coverTexture, finishSleeve, thickenSleeve } from '../vinyl/sleeveTextures'
 import { brushedLinearMaps } from './brushed'
 import { STAND_SLEEVE, standDirection } from './SleeveStand'
+import { RETURN_FLIGHT_S } from './Crate'
 import { deckAudio } from '../audio/deckAudio'
 
 // The PS 500 rig: loads the Blender model and animates it towards the state
@@ -28,6 +29,10 @@ const damp = THREE.MathUtils.damp
 const SLIDE_DISTANCE = 0.32 // a diameter plus a little
 const SLIDE_OUT_S = 1.3
 const SLIDE_IN_S = 1.1
+// Record in hand: hovering over the platter, top face tilted towards the viewer
+const HOLD_HEIGHT = 0.05 // m above its place on the platter
+const HOLD_TILT = 0.15 // rad
+const FLIP_DRAG_PX = 30 // drag this far to turn it over
 type SleevePhase = 'in' | 'sliding-out' | 'lifting' | 'free' | 'returning' | 'aligning' | 'sliding-in'
 
 type Nodes = Record<string, THREE.Object3D>
@@ -108,13 +113,28 @@ export function Deck() {
   const arm = useRef<ArmGeometry | null>(null)
   const contactLift = useRef(0.05)
   const leadInYaw = useRef(0)
-  const s = useRef({ omega: 0, yaw: 0, lift: 0, lid: 0, start: 0, speedKnob: 0, cue: 0, flip: 0, handBlend: 0, onPlatter: 0 })
+  const s = useRef({ omega: 0, yaw: 0, lift: 0, lid: 0, start: 0, speedKnob: 0, cue: 0, handBlend: 0, onPlatter: 0 })
   const dragging = useRef(false)
+  // Flipping the record in hand: a half turn about an axis in its plane, chosen
+  // by the drag direction. `base` is the rest orientation before the turn.
+  const flipper = useRef({
+    base: new THREE.Quaternion(),
+    baseDown: false,
+    axis: new THREE.Vector3(0, 0, 1),
+    sign: 1,
+    a: 0,
+    next: null as { axis: THREE.Vector3; sign: number } | null,
+  })
+  const flipDrag = useRef<{ x: number; y: number; done: boolean } | null>(null)
   const flight = useRef({
     album: null as string | null,
     t: 1,
     duration: 1.2,
     watch: true,
+    /** Seconds to wait for the previous record to fly back to the crate. */
+    wait: 0,
+    /** Carried from where it was picked; otherwise it just appears on the stand. */
+    carried: false,
     from: new THREE.Vector3(),
     fromQ: new THREE.Quaternion(),
   })
@@ -126,6 +146,7 @@ export function Deck() {
     if (cached) return cached as Poses
     const vinyl = r.Vinyl
     const sleeve = r.Sleeve
+    thickenSleeve(sleeve)
     vinyl.updateWorldMatrix(true, false)
     // Vinyl pivots around its mid-plane so flipping keeps it in place
     const holder = new THREE.Group()
@@ -405,17 +426,15 @@ export function Deck() {
     // --- Vinyl: sleeve -> hand -> platter ---
     const holder = poses.holder
     const stand = poses.stand
-    // With no album the set is shrunk away rather than hidden, so its shaders
-    // are compiled up front (hidden objects are skipped by the renderer)
-    const present = st.album ? 1 : 1e-5
-    holder.scale.setScalar(present)
-    stand.scale.setScalar(present)
-
-    // A newly picked sleeve is carried from where it was taken to the stand
+    // A newly picked sleeve is carried from where it was taken to the stand,
+    // once the one it replaces has flown back to the crate
     const fl = flight.current
     if (st.album?.id !== fl.album) {
+      const replacing = fl.album !== null
       fl.album = st.album?.id ?? null
       const from = st.pickedFrom
+      fl.wait = st.album && replacing ? RETURN_FLIGHT_S : 0
+      fl.carried = !!(st.album && from)
       if (st.album && from) {
         fl.from.fromArray(from.pos)
         fl.fromQ.fromArray(from.quat)
@@ -424,9 +443,28 @@ export function Deck() {
         fl.watch = from.watch
         fl.t = 0
         if (!from.watch) st.followFocus('deck')
-      } else fl.t = 1
+      } else fl.t = fl.wait > 0 ? 0 : 1
     }
-    if (fl.t < 1) {
+    const waiting = fl.wait > 0
+    if (waiting) {
+      fl.wait -= dt
+      if (fl.carried) {
+        // Still where it was picked, as if not taken yet
+        stand.position.copy(fl.from)
+        stand.quaternion.copy(fl.fromQ)
+      } else if (fl.wait <= 0) {
+        fl.t = 1
+        stand.position.copy(poses.inSleeve)
+        stand.quaternion.copy(poses.inSleeveQ)
+      }
+    }
+    // With no album the set is shrunk away rather than hidden, so its shaders
+    // are compiled up front (hidden objects are skipped by the renderer)
+    const present = st.album && !(waiting && !fl.carried) ? 1 : 1e-5
+    holder.scale.setScalar(present)
+    stand.scale.setScalar(present)
+
+    if (!waiting && fl.t < 1) {
       fl.t = Math.min(1, fl.t + dt / fl.duration)
       const e = THREE.MathUtils.smootherstep(fl.t, 0, 1)
       // Up out of the crate / off the shelf, over and down onto the stand
@@ -443,23 +481,44 @@ export function Deck() {
         if (fl.watch) st.followFocus('deck')
       }
     }
-    v.flip = damp(v.flip, sideIndex % 2 ? Math.PI : 0, 6, dt)
+    // Half turn towards the face the store wants up; turning back mid-way
+    // just reverses along the same axis
+    const fp = flipper.current
+    const faceDown = sideIndex % 2 === 1
+    if (faceDown !== fp.baseDown && Math.abs(fp.a) < 1e-3 && fp.next) {
+      fp.axis.copy(fp.next.axis)
+      fp.sign = fp.next.sign
+    }
+    fp.next = null
+    const flipTarget = faceDown !== fp.baseDown ? fp.sign * Math.PI : 0
+    fp.a = damp(fp.a, flipTarget, 6, dt)
+    if (flipTarget !== 0 && Math.abs(fp.a - flipTarget) < 1e-3) {
+      fp.base.premultiply(tmp.q2.setFromAxisAngle(fp.axis, flipTarget))
+      fp.baseDown = faceDown
+      fp.a = 0
+      fp.axis.set(0, 0, 1) // F / button: flip sideways
+      fp.sign = 1
+    }
 
     // Target transform for each place
     if (st.vinyl === 'platter') {
       tmp.m.copy(n.Platter.matrixWorld).multiply(poses.onPlatterLocal)
       tmp.m.decompose(tmp.pos, tmp.q, tmp.scale)
     } else if (st.vinyl === 'hand') {
-      // Held up in front of the viewer, tilted towards them
-      const plat = n.Platter.getWorldPosition(new THREE.Vector3())
+      // Held just above the platter, about to be lowered onto it, and tilted
+      // towards the viewer so the side facing up can be read
+      tmp.m.copy(n.Platter.matrixWorld).multiply(poses.onPlatterLocal)
+      const plat = new THREE.Vector3().setFromMatrixPosition(tmp.m)
       const toCam = viewer.position.clone().sub(plat).setY(0).normalize()
-      tmp.pos.copy(plat).addScaledVector(toCam, 0.16).add(new THREE.Vector3(0, 0.2, 0))
-      tmp.q.setFromEuler(tmp.e.set(Math.PI / 2 - 0.5, Math.atan2(toCam.x, toCam.z), 0, 'YXZ'))
+      // While turning over it is raised so its edge clears the platter
+      const clear = (R_DISC + 0.02) * Math.abs(Math.sin(fp.a))
+      tmp.pos.copy(plat).addScaledVector(toCam, 0.03).add(new THREE.Vector3(0, HOLD_HEIGHT + clear, 0))
+      tmp.q.setFromEuler(tmp.e.set(HOLD_TILT, Math.atan2(toCam.x, toCam.z), 0, 'YXZ'))
     } else {
       tmp.pos.copy(poses.inSleeve)
       tmp.q.copy(poses.inSleeveQ)
     }
-    tmp.q2.setFromAxisAngle(new THREE.Vector3(0, 0, 1), v.flip)
+    tmp.q2.setFromAxisAngle(fp.axis, fp.a).multiply(fp.base)
     tmp.q.multiply(tmp.q2)
 
     // The record goes in and out of the sleeve physically: it slides along the
@@ -589,12 +648,42 @@ export function Deck() {
     const st = useDeck.getState()
     const name = e.object.name
     if (name.startsWith('Vinyl')) {
-      if (st.vinyl === 'hand') st.flipVinyl()
+      // In hand it hovers over the platter: clicking it lowers it, dragging
+      // it turns it over (see onRecordDown)
+      if (st.vinyl === 'hand') {
+        if (e.delta < FLIP_DRAG_PX / 3) st.placeOnPlatter()
+      }
       else st.takeVinyl()
     } else if (name.startsWith('Sleeve') || name.startsWith('Inner_Sleeve')) {
       if (st.vinyl === 'hand') st.sleeveVinyl()
       else if (st.vinyl === 'sleeve') st.takeVinyl()
     }
+  }
+
+  // Drag the record in hand sideways or up/down to turn it over that way
+  const onRecordDown = (e: ThreeEvent<PointerEvent>) => {
+    if (!e.object.name.startsWith('Vinyl') || useDeck.getState().vinyl !== 'hand') return
+    e.stopPropagation()
+    flipDrag.current = { x: e.clientX, y: e.clientY, done: false }
+    ;(e.target as Element).setPointerCapture?.(e.pointerId)
+  }
+  const onRecordMove = (e: ThreeEvent<PointerEvent>) => {
+    const d = flipDrag.current
+    if (!d || d.done) return
+    const dx = e.clientX - d.x
+    const dy = e.clientY - d.y
+    if (Math.hypot(dx, dy) < FLIP_DRAG_PX) return
+    d.done = true
+    // In the hand's frame X points to the viewer's right, Z towards them:
+    // sideways drags roll it about Z, vertical drags tip it about X
+    flipper.current.next =
+      Math.abs(dx) > Math.abs(dy)
+        ? { axis: new THREE.Vector3(0, 0, 1), sign: dx > 0 ? -1 : 1 }
+        : { axis: new THREE.Vector3(1, 0, 0), sign: dy > 0 ? 1 : -1 }
+    useDeck.getState().flipVinyl()
+  }
+  const onRecordUp = () => {
+    flipDrag.current = null
   }
 
   // A newly picked album starts with its record in the sleeve
@@ -616,7 +705,13 @@ export function Deck() {
         }}
         onPointerOut={() => (document.body.style.cursor = '')}
       />
-      <primitive object={recordGltf.scene} onClick={onRecordClick} />
+      <primitive
+        object={recordGltf.scene}
+        onClick={onRecordClick}
+        onPointerDown={onRecordDown}
+        onPointerMove={onRecordMove}
+        onPointerUp={onRecordUp}
+      />
     </>
   )
 }

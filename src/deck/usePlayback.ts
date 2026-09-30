@@ -91,22 +91,27 @@ export function usePlayback(player: React.RefObject<Spotify.Player | null>, devi
         const s = snap.current
         if (!s) return void (raf = requestAnimationFrame(tick))
         const position = s.paused ? s.positionMs : s.positionMs + (now - s.at)
-        const inSide = side.tracks.some((t) => t.uri === s.trackUri)
-        const lastTrack = side.tracks[side.tracks.length - 1]
-        const finished =
-          !inSide || (s.trackUri === lastTrack.uri && position >= lastTrack.durationMs - 400) || (s.paused && position === 0)
+        const band = side.bands.find((b) => b.track.uri === m.trackUri)
+        const duration = (s.trackUri === m.trackUri && s.durationMs) || band?.track.durationMs || 0
+        // The track is over when it nears its end, or when Spotify has already
+        // moved on (another track, or the paused-at-0 state it reports between tracks)
+        const ended = s.trackUri !== m.trackUri || position >= duration - 300 || (s.paused && position === 0)
 
-        if (finished) {
-          // Spotify would roll on into the next side: stop at the run-out instead
+        if (!band) {
+          // Not on this side any more: stop at the run-out
           pause()
           mode.current = { kind: 'run-out', since: now }
           audio.setRunOut(true)
           deck.setStylusRadius(R_LEAD_OUT)
-        } else if (s.trackUri) {
-          const target = radiusAt(side, s.trackUri, position)
+        } else if (ended) {
+          // Like a real record: the stylus crosses the silent gap into the next
+          // track (or on to the run-out after the last one), see 'gliding'
+          pause()
+          mode.current = { kind: 'gliding' }
+          deck.setStylusRadius(band.rEnd - 1e-5)
+        } else {
+          const target = radiusAt(side, m.trackUri, position)
           if (target !== null) deck.setStylusRadius(target)
-          // Track changed inside the side (Spotify moved on): keep following it
-          if (s.trackUri !== m.trackUri) mode.current = { kind: 'playing', trackUri: s.trackUri }
         }
       } else if (m.kind === 'run-out') {
         // PS 500 auto-stop: after a few turns in the locked groove the arm returns

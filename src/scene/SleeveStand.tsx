@@ -7,7 +7,7 @@ import * as THREE from 'three'
 
 const CABINET_TOP = 0.68
 // Far enough left that a record can slide right out before reaching the deck
-const BASE = { x: -0.4, z: -0.05, w: 0.3, h: 0.024, d: 0.075 }
+const BASE = { x: -0.35, z: -0.05, w: 0.3, h: 0.024, d: 0.075 }
 const GROOVE_Z = BASE.z + 0.01
 const GROOVE_DEPTH = 0.01
 const SLEEVE_HALF = 0.157

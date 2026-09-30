@@ -19,7 +19,9 @@ type SeatedFocus = Exclude<Focus, 'free'>
 const POSES: Record<SeatedFocus, Pose> = {
   room: { pos: new THREE.Vector3(0.3, 1.26, 1.95), target: new THREE.Vector3(0.05, 1.06, 0), fov: 56 },
   deck: { pos: new THREE.Vector3(0.36, 1.1, 0.46), target: new THREE.Vector3(0.3, 0.7, 0.0), fov: 42 },
-  crate: { pos: new THREE.Vector3(-0.55, 1.08, 0.62), target: new THREE.Vector3(-0.78, 0.8, 0.02), fov: 42 },
+  crate: { pos: new THREE.Vector3(-0.56, 1.24, 0.86), target: new THREE.Vector3(-0.78, 0.94, 0.02), fov: 46 },
+  // Stepped back from the sideboard: crate, stand and deck side by side
+  both: { pos: new THREE.Vector3(-0.2, 1.3, 1.0), target: new THREE.Vector3(-0.2, 0.74, 0.0), fov: 48 },
   // Standing by the glass wall, looking out over the skyline
   window: { pos: new THREE.Vector3(1.25, 1.52, 1.6), target: new THREE.Vector3(2.6, 1.4, 1.35), fov: 58 },
   // In front of the armchair, with the lamp behind it
@@ -37,6 +39,11 @@ const WIDE: Partial<Record<SeatedFocus, Pose>> = {
   chair: { pos: new THREE.Vector3(1.6, 1.45, 3.1), target: new THREE.Vector3(-0.9, 0.75, 0.9), fov: 62 },
 }
 const ZOOM_PER_PIXEL = 0.0015
+
+// Views that must keep this width (m) around their target in frame: on narrow
+// (portrait) screens they widen the lens and step back
+const FIT_WIDTH: Partial<Record<SeatedFocus, number>> = { both: 1.95 }
+const NARROW_FOV = 70
 
 const LOOK_YAW = 0.35 // radians of free look either side
 const LOOK_PITCH = 0.18
@@ -71,6 +78,7 @@ export function CameraRig() {
   // Zoom-out amount per view (0 close, 1 wide), kept while switching views
   const zoom = useMemo<Partial<Record<SeatedFocus, number>>>(() => ({}), [])
   const blend = useMemo<Pose>(() => ({ pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 50 }), [])
+  const fitted = useMemo<Pose>(() => ({ pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: 50 }), [])
   const free = useMemo(
     () => ({ pos: new THREE.Vector3(), yaw: 0, pitch: 0, keys: new Set<string>(), dragging: false, lastX: 0, lastY: 0, prevFocus: 'room' as Focus }),
     [],
@@ -86,7 +94,7 @@ export function CameraRig() {
         free.pos.addScaledVector(fwd, -px * WHEEL_PER_PIXEL).clamp(BOUNDS.min, BOUNDS.max)
         return
       }
-      if (focus === 'crate') return
+      if (focus === 'crate' || focus === 'both') return
       if (WIDE[focus]) {
         zoom[focus] = THREE.MathUtils.clamp((zoom[focus] ?? 0) + px * ZOOM_PER_PIXEL, 0, 1)
         return
@@ -109,6 +117,7 @@ export function CameraRig() {
       if (e.key === '5') setFocus('chair')
       if (e.key === '6') setFocus('free')
       if (e.key === '7') setFocus('shelf')
+      if (e.key === '8') setFocus('both')
       if (e.key.toLowerCase() === 'f') flipVinyl()
       if (e.key === 'Escape') setFocus('room')
     }
@@ -222,6 +231,18 @@ export function CameraRig() {
       blend.target.lerpVectors(pose.target, wide.target, t)
       blend.fov = THREE.MathUtils.lerp(pose.fov, wide.fov, t)
       pose = blend
+    }
+    const fitWidth = FIT_WIDTH[focus]
+    if (fitWidth) {
+      const fov = camera.aspect < 1 ? NARROW_FOV : pose.fov
+      const halfH = Math.atan(Math.tan(THREE.MathUtils.degToRad(fov) / 2) * camera.aspect)
+      const need = fitWidth / 2 / Math.tan(halfH)
+      const back = dir.subVectors(pose.pos, pose.target)
+      const dist = Math.max(back.length(), need)
+      fitted.pos.copy(pose.target).addScaledVector(back.normalize(), dist).clamp(BOUNDS.min, BOUNDS.max)
+      fitted.target.copy(pose.target)
+      fitted.fov = fov
+      pose = fitted
     }
     const k = 1 - Math.exp(-2.8 * dt)
     state.pos.lerp(pose.pos, k)

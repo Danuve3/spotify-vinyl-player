@@ -10,16 +10,31 @@ import { Room } from './scene/Room'
 import { Search } from './ui/Search'
 import { useWeather } from './scene/weather'
 import { useIdle } from './ui/useIdle'
+import { useCrateFront } from './scene/Crate'
 
 function useHint(): string {
   const deck = useDeck()
+  if (!deck.album && (deck.focus === 'crate' || deck.focus === 'both'))
+    return 'Rueda, arrastra o ←/→ para hojear · Clic en la portada (o Intro) para elegirla'
   if (!deck.album) return 'Elige un disco de la caja'
   if (deck.vinyl === 'sleeve') return 'Haz clic en la funda para sacar el vinilo'
-  if (deck.vinyl === 'hand') return 'Clic en el vinilo: darle la vuelta · Clic en el plato: ponerlo · Clic en la funda: guardarlo'
+  if (deck.vinyl === 'hand') return 'Clic en el vinilo: ponerlo en el plato · Arrástralo (o F): darle la vuelta · Clic en la funda: guardarlo'
   if (!deck.lidOpen) return 'Tapa cerrada'
   if (deck.arm === 'rest' && !deck.motorOn) return 'Pulsa start, o sube la palanca y lleva el brazo a mano'
   if (deck.arm === 'lifted') return 'Arrastra el brazo hasta el surco y baja la palanca'
   return ''
+}
+
+/** Title and artist of the record at the front of the crate. */
+function CrateCaption() {
+  const album = useCrateFront((s) => s.album)
+  if (!album) return null
+  return (
+    <p className="crate-caption" key={album.id}>
+      <strong>{album.name}</strong>
+      <span>{album.artist}</span>
+    </p>
+  )
 }
 
 function NowPlaying() {
@@ -135,6 +150,7 @@ export default function App() {
         <nav className="views">
           <button className="ghost" onClick={() => useDeck.getState().setFocus('crate')}>Discos</button>
           <button className="ghost" onClick={() => useDeck.getState().setFocus('deck')}>Tocadiscos</button>
+          <button className="ghost" onClick={() => useDeck.getState().setFocus('both')}>Discos&nbsp;+&nbsp;Tocadiscos</button>
           <button className="ghost" onClick={() => useDeck.getState().setFocus('room')}>Sala</button>
           <button className="ghost" onClick={() => useDeck.getState().setFocus('window')}>Ventana</button>
           <button className="ghost" onClick={() => useDeck.getState().setFocus('chair')}>Sillón</button>
@@ -185,6 +201,7 @@ export default function App() {
         <button className="ghost" onClick={() => (logout(), setLoggedIn(false))}>Salir</button>
       </footer>
 
+      <CrateCaption />
       {hint && <p className="hint">{hint}</p>}
       {(message || error || playerError) && <p className="toast">{message ?? error ?? playerError}</p>}
     </div>

@@ -4,7 +4,7 @@ import { useGLTF } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Album } from '../spotify/api'
 import { useDeck } from '../deck/store'
-import { coverTexture, finishSleeve } from '../vinyl/sleeveTextures'
+import { coverTexture, finishSleeve, thickenSleeve } from '../vinyl/sleeveTextures'
 
 // A Vitsoe 606 Universal Shelving System (Dieter Rams, 1960) on the wall
 // facing the deck: anodised E-tracks, off-white shelves with their folded
@@ -331,6 +331,7 @@ export function Shelf({ albums }: Props) {
     return shown.slice(0, 3).map((album, i) => {
       const o = template.clone(true)
       o.visible = true
+      thickenSleeve(o)
       o.traverse((c) => {
         const mesh = c as THREE.Mesh
         if (!mesh.isMesh) return

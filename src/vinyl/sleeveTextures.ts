@@ -8,6 +8,15 @@ import type { Side } from './sides'
  * Laminated card finish for a printed sleeve face: a satin sheen, and the
  * artwork lifts itself a little so covers stay vivid in the dim room.
  */
+/**
+ * Sleeves a touch thicker than the modelled card, so they read as holding a
+ * record. Idempotent (the modelled scale is kept in userData, which clones copy).
+ */
+export function thickenSleeve(sleeve: THREE.Object3D) {
+  sleeve.userData.baseThickness ??= sleeve.scale.y
+  sleeve.scale.y = sleeve.userData.baseThickness * 1.5
+}
+
 export function finishSleeve(mat: THREE.MeshStandardMaterial, map: THREE.Texture) {
   mat.map = map
   mat.color.set('#ffffff')

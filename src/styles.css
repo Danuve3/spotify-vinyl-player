@@ -219,6 +219,39 @@ button.ghost {
 }
 
 .error,
+.crate-caption {
+  position: absolute;
+  left: 50%;
+  bottom: 110px;
+  transform: translateX(-50%);
+  margin: 0;
+  max-width: calc(100% - 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  text-shadow: 0 1px 10px #000;
+  pointer-events: none;
+  animation: caption-in 0.25s ease-out;
+}
+.crate-caption strong {
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.crate-caption span {
+  font-size: 13px;
+  color: var(--amber);
+}
+@keyframes caption-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4px);
+  }
+}
+
 .toast {
   color: #ffb4a0;
 }
@@ -481,6 +514,7 @@ button.ghost {
 .hud-top,
 .deck-bar,
 .hint,
+.crate-caption,
 .free-hint {
   transition: opacity 0.25s ease;
 }
@@ -488,6 +522,7 @@ button.ghost {
 .app--idle .hud-top,
 .app--idle .deck-bar,
 .app--idle .hint,
+.app--idle .crate-caption,
 .app--idle .free-hint {
   opacity: 0;
   pointer-events: none;
