@@ -55,13 +55,21 @@ El workflow `Deploy to GitHub Pages` también se puede lanzar a mano desde la pe
 - `src/vinyl/` — reparto en caras, mapa surco ↔ canción y texturas generadas (surcos, etiqueta, funda).
 - `src/audio/` — crackle, motor, aguja y surco final sintetizados con Web Audio.
 - `src/scene/` — escena React Three Fiber, cámara sentada y calidad adaptativa.
-- `src/scene/city/` — vista nocturna de Manhattan desde la cristalera: panorámica real, cielo procedural (luna, nubes, estrellas) y luces animadas.
+- `src/scene/landscape/` — lo que se ve por la cristalera, a elegir: Manhattan, campo, mar, futurista, postapocalíptico o la Luna. Cada uno es una panorámica real bajo un cielo procedural (luna, nubes, estrellas, humo) con su propia animación (tráfico, luciérnagas, oleaje, vehículos voladores, fuegos, la Tierra girando).
+- `blender/landscapes.py` — recorta y etalona las panorámicas originales (en `sources/`, fuera del repo) a `public/landscapes/`.
 
 ## Créditos
 
 Modelos y texturas de la habitación de [Poly Haven](https://polyhaven.com) (CC0): *Modern Wooden Cabinet* (Patrik Pangerl), *Modern Arm Chair 01* (Vibrant Nordic), *Potted Plant 02* (Rico Cilliers), *Herringbone Parquet*, *Plastered Wall 04*, *Wool Boucle*, *Oak Veneer 02*, *Ceramic Vase 01/02/03* (James Ray Cock), *Wooden Bowl 02* (Kuutti Siitonen).
 
-Vista de la ciudad: [*Manhattan at night south of Rockefeller Center panorama*](https://commons.wikimedia.org/wiki/File:Manhattan_at_night_south_of_Rockefeller_Center_panorama_(11256p).jpg), de Rhododendrites, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/); redimensionada a 4096 px (`public/city/manhattan-night.webp`), que se distribuye bajo la misma licencia.
+Paisajes de la ventana (`public/landscapes/`, recortados, redimensionados y etalonados; las obras derivadas de fotos CC BY-SA se distribuyen bajo la misma licencia):
+
+- Manhattan: [*Manhattan at night south of Rockefeller Center panorama*](https://commons.wikimedia.org/wiki/File:Manhattan_at_night_south_of_Rockefeller_Center_panorama_(11256p).jpg), de Rhododendrites, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- Campo: HDRI [*Clarens Night 01*](https://polyhaven.com/a/clarens_night_01), de Poly Haven (CC0).
+- Mar: cielo del HDRI [*Kloppenheim 02 (Pure Sky)*](https://polyhaven.com/a/kloppenheim_02_puresky), de Poly Haven (CC0); el mar se genera en tiempo real.
+- Futurista: [*Panorama of Chongqing at night taken from Eling Park*](https://commons.wikimedia.org/wiki/File:Panorama_of_Chongqing_at_night_taken_from_Eling_Park.jpeg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+- Postapocalíptico: [*Pripyat panorama 2009-001*](https://commons.wikimedia.org/wiki/File:Pripyat_panorama_2009-001.jpg), [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/); llevada al anochecer y sin el cielo original.
+- Luna: [*Apollo 17 Landing Site Panorama during EVA1*](https://commons.wikimedia.org/wiki/File:Apollo_17_Landing_Site_Panorama_during_EVA1_JSC2007e045384.jpg), NASA (dominio público). La Tierra: *Blue Marble* de NASA Visible Earth (dominio público).
 
 Estantería: inspirada en el sistema Vitsoe 606 (Dieter Rams, 1960); proyecto personal sin relación con Vitsoe.
 

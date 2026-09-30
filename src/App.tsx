@@ -9,6 +9,7 @@ import { deckAudio } from './audio/deckAudio'
 import { Room } from './scene/Room'
 import { Search } from './ui/Search'
 import { useWeather } from './scene/weather'
+import { LANDSCAPES, LANDSCAPE_ORDER, useLandscape, type LandscapeId } from './scene/landscape/landscapes'
 import { useIdle } from './ui/useIdle'
 import { useCrateFront } from './scene/Crate'
 
@@ -74,6 +75,7 @@ export default function App() {
   const album = useDeck((s) => s.album)
   const focus = useDeck((s) => s.focus)
   const rain = useWeather((s) => s.rain)
+  const landscape = useLandscape((s) => s.id)
   // With no input for a while the controls fade away, leaving just the room
   const idle = useIdle(4000)
 
@@ -162,14 +164,26 @@ export default function App() {
           >
             Libre
           </button>
-          <button
-            className={`ghost toggle ${rain ? 'toggle--on' : ''}`}
-            onClick={useWeather.getState().toggleRain}
-            aria-pressed={rain}
-            title={rain ? 'Quitar la lluvia' : 'Que llueva'}
-          >
-            Lluvia
-          </button>
+          <label className="view-pick" title="Lo que se ve por la ventana">
+            <span className="sr-only">Paisaje</span>
+            <select value={landscape} onChange={(e) => useLandscape.getState().set(e.target.value as LandscapeId)}>
+              {LANDSCAPE_ORDER.map((id) => (
+                <option key={id} value={id}>
+                  {LANDSCAPES[id].label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {LANDSCAPES[landscape].rain && (
+            <button
+              className={`ghost toggle ${rain ? 'toggle--on' : ''}`}
+              onClick={useWeather.getState().toggleRain}
+              aria-pressed={rain}
+              title={rain ? 'Quitar la lluvia' : 'Que llueva'}
+            >
+              Lluvia
+            </button>
+          )}
           <button className="ghost" onClick={fullscreen} title="Pantalla completa">⛶</button>
         </nav>
       </header>

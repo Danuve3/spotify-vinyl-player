@@ -9,7 +9,7 @@ import { Crate } from './Crate'
 import { CameraRig } from './CameraRig'
 import { useQuality } from './quality'
 import './specularAA'
-import { City } from './city/City'
+import { Landscape } from './landscape/Landscape'
 import { Paintings } from './Paintings'
 import { SleeveStand } from './SleeveStand'
 import { Speakers } from './Speakers'
@@ -224,7 +224,7 @@ export function Room({ albums }: Props) {
           <Paintings />
           <SleeveStand />
           <Speakers />
-          <City />
+          <Landscape />
           <Rain />
           <LampCord />
           {quality.post && <GlassReflection />}

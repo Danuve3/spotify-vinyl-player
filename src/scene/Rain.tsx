@@ -1,8 +1,8 @@
 import { useEffect, useMemo } from 'react'
 import { useFrame } from '@react-three/fiber'
-import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
-import { EL_BOTTOM, EL_TOP, HALF_SPAN, HAZE, PHOTO_URL } from './city/City'
+import { view } from './landscape/view'
+import { LANDSCAPES, useLandscape } from './landscape/landscapes'
 import { rainAmount, useWeather } from './weather'
 import { rainAudio } from '../audio/rainAudio'
 
@@ -163,17 +163,19 @@ const streakFragment = /* glsl */ `
 `
 
 export function Rain() {
-  const rain = useWeather((s) => s.rain)
-  const photo = useTexture(PHOTO_URL)
+  // No rain where there is no air
+  const allowed = useLandscape((s) => LANDSCAPES[s.id].rain)
+  const rain = useWeather((s) => s.rain) && allowed
 
   const { drops, streaks, uniforms } = useMemo(() => {
     const uniforms = {
       uTime: { value: 0 },
       uRain: rainAmount,
-      uPhoto: { value: photo },
-      uHalfSpan: { value: HALF_SPAN },
-      uElevation: { value: new THREE.Vector2(EL_BOTTOM, EL_TOP) },
-      uHaze: { value: HAZE },
+      // The landscape's own, so the drops refract whichever is outside
+      uPhoto: view.uPhoto,
+      uHalfSpan: view.uHalfSpan,
+      uElevation: view.uElevation,
+      uHaze: view.uHaze,
     }
 
     const w = GLASS.z1 - GLASS.z0
@@ -219,7 +221,7 @@ export function Rain() {
     streaks.frustumCulled = false
     streaks.renderOrder = 3
     return { drops, streaks, uniforms }
-  }, [photo])
+  }, [])
 
   useEffect(
     () => () => {
