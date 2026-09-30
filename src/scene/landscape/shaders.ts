@@ -53,6 +53,8 @@ export const skyFragment = /* glsl */ `
   uniform float uSmoke;    // low, rolling smoke lit from below (wasteland)
   uniform vec3 uGlow;      // colour of that light from below
   uniform float uFlash;    // lightning, 0..1
+  uniform float uAurora;   // northern lights, 0..1 (night only)
+  uniform vec3 uMoon2;     // a second moon (fantasy); off when zero
   varying vec3 vDir;
 
   void main() {
@@ -88,6 +90,39 @@ export const skyFragment = /* glsl */ `
     vec2 mp = (d - uMoon * mc).xy * 900.0;
     col += vec3(1.0, 0.96, 0.88) * disc * 3.0 * (0.82 + 0.18 * noise(mp * 0.9)) * moon;
     col += vec3(0.6, 0.62, 0.75) * (pow(max(mc, 0.0), 3000.0) * 0.3 + pow(max(mc, 0.0), 60.0) * 0.025) * moon;
+
+    // A second, smaller and warmer moon
+    if (uMoon2.x != 0.0 || uMoon2.y != 0.0) {
+      vec3 m2 = normalize(uMoon2);
+      float c2 = dot(d, m2);
+      float disc2 = smoothstep(0.99994, 0.99996, c2);
+      vec2 mp2 = (d - m2 * c2).xy * 1400.0;
+      float night = (1.0 - uDay) * (1.0 - uRain * 0.95);
+      col += vec3(1.0, 0.78, 0.6) * disc2 * 2.2 * (0.75 + 0.25 * noise(mp2)) * night;
+      col += vec3(0.7, 0.5, 0.45) * pow(max(c2, 0.0), 400.0) * 0.15 * night;
+    }
+
+    // Northern lights: slow curtains with vertical rays, green fading to violet at the top
+    if (uAurora > 0.0 && h > 0.0) {
+      float night = (1.0 - uDay) * (1.0 - uRain);
+      float az = atan(d.z, d.x);
+      float t = uTime * 0.03;
+      vec3 aur = vec3(0.0);
+      for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        // The curtain's base line winds across the sky
+        float base = 0.18 + 0.12 * fk + 0.08 * sin(az * (2.0 + fk) + t * (1.0 + fk * 0.3) + fk * 2.0) + 0.05 * fbm(vec2(az * 3.0 + t, fk * 7.0));
+        float above = h - base;
+        if (above < -0.02) continue;
+        float rays = 0.5 + 0.5 * fbm(vec2(az * 60.0 + t * 8.0 + fk * 13.0, t * 2.0));
+        float body = exp(-max(above, 0.0) * (6.0 + fk * 2.0)) * smoothstep(-0.02, 0.01, above);
+        float fold = 0.5 + 0.5 * sin(az * 9.0 + t * 6.0 + fk * 3.0 + 2.0 * fbm(vec2(az * 4.0, t)));
+        vec3 green = vec3(0.1, 0.9, 0.45);
+        vec3 violet = vec3(0.55, 0.2, 0.8);
+        aur += mix(green, violet, smoothstep(0.02, 0.18, above)) * body * rays * (0.4 + 0.6 * fold) * (0.9 - fk * 0.2);
+      }
+      col += aur * 0.22 * uAurora * night;
+    }
 
     // Drifting clouds, lit from below
     if (h > 0.0 && uClouds > 0.0) {
@@ -144,7 +179,14 @@ export const photoFragment = /* glsl */ `
   uniform float uCity;      // lit windows that switch off and on, shimmering lights
   uniform float uWind;      // grass stirring in the foreground
   uniform float uFlash;     // lightning
-  uniform vec4 uFires[8];   // (u, v from the top, radius in u, strength) lighting the ground
+  uniform vec4 uFires[8];   // (u, v from the top, radius in u, strength) lighting the ground; strength < 0: smoke only
+  uniform vec4 uLamps[24];  // night lights: (u, v from the top, glow radius in u, strength); strength < 0: floodlight, no visible bulb
+  uniform vec3 uLampColor;
+  uniform vec4 uWater;      // water: v from the top (top, bottom) and u (left, right): ripples and glints
+  uniform float uShimmer;   // heat haze near the horizon by day
+  uniform float uLava;      // glowing lava in the photo pulses
+  uniform float uFog;       // drifting fog, thicker low down
+  uniform vec3 uFogColor;
   varying vec3 vDir;
 
   struct Layer { vec3 col; float a; vec2 uv; bool inside; };
@@ -169,9 +211,39 @@ export const photoFragment = /* glsl */ `
       uv += w * uWind * near * gust * 0.0025;
     }
 
+    // Water: the reflection wavers, more near the shore of view
+    float water = 0.0;
+    if (uWater.y > uWater.x) {
+      float fromTop = 1.0 - uv.y;
+      water = smoothstep(uWater.x, uWater.x + 0.01, fromTop) * (1.0 - smoothstep(uWater.y - 0.01, uWater.y, fromTop))
+        * smoothstep(uWater.z, uWater.z + 0.01, uv.x) * (1.0 - smoothstep(uWater.w - 0.01, uWater.w, uv.x));
+      if (water > 0.0) {
+        float near = (fromTop - uWater.x) / max(uWater.y - uWater.x, 0.001);
+        vec2 q = vec2(uv.x * 90.0, fromTop * 900.0 / (0.3 + near));
+        uv += vec2(noise(q + vec2(uTime * 0.6, -uTime * 1.4)) - 0.5, noise(q * 1.3 - uTime) - 0.5) * vec2(0.0012, 0.004) * (0.3 + near) * water;
+      }
+    }
+
+    // Heat haze: the air shimmers just above the ground, by day
+    if (uShimmer > 0.0) {
+      float band = exp(-pow((uv.y - horizon) / 0.06, 2.0)) * uShimmer * uDay;
+      uv.y += (noise(vec2(uv.x * 140.0, uv.y * 300.0 - uTime * 3.0)) - 0.5) * 0.0015 * band;
+    }
+
     // In the rain it all softens (wet air) and a little mist hangs over it
     vec4 tex4 = texture(tex, clamp(uv, vec2(0.0), vec2(1.0)), uRain * 0.7);
     vec3 col = tex4.rgb;
+    if (water > 0.0) {
+      // Sparkles where the light catches the wavelets
+      float g = pow(noise(vec2(uv.x * 700.0, (1.0 - uv.y) * 2500.0) + uTime * vec2(1.7, -2.3)), 12.0);
+      col += col * g * 3.0 * water * (0.3 + dot(col, vec3(0.3, 0.6, 0.1)));
+    }
+    if (uLava > 0.0) {
+      // Molten rock: bright, saturated red-orange; it throbs and flickers
+      float hot = smoothstep(0.25, 0.5, col.r - max(col.g, col.b) * 0.6) * smoothstep(0.2, 0.5, col.r);
+      float pulse = 0.75 + 0.35 * noise(vec2(uv.x * 30.0 + uTime * 0.8, uv.y * 20.0 - uTime * 1.5)) + 0.1 * sin(uTime * 9.0 + uv.x * 40.0);
+      col *= mix(1.0, pulse * (1.0 + uLava), hot);
+    }
     col = mix(col, uHaze * 1.6, uRain * 0.12 * (0.4 + 0.6 * smoothstep(0.35, 0.7, uv.y)));
     float lum = dot(col, vec3(0.3, 0.59, 0.11));
 
@@ -218,6 +290,23 @@ export const photoFragment = /* glsl */ `
     vec3 col = a > 0.0001 ? (n.col * wn + y.col * wd) / a : vec3(0.0);
     vec2 uv = n.uv;
 
+    // Lamps at night: a warm pool of light around each, and the glow itself
+    vec3 lampLight = vec3(0.0);
+    float aspectL = uPhotoSize.y / uPhotoSize.x;
+    for (int i = 0; i < 24; i++) {
+      vec4 l = uLamps[i];
+      if (l.w == 0.0) continue;
+      vec2 dv = (uv - vec2(l.x, 1.0 - l.y)) * vec2(1.0, aspectL);
+      float r2 = dot(dv, dv);
+      float fl = 0.85 + 0.15 * noise(vec2(uTime * 5.0, float(i) * 7.0));
+      // Floodlights wash a wall with light; lamps also show their bright bulb
+      float bulb = l.w > 0.0 ? exp(-r2 / (l.z * l.z * 0.02)) * 2.5 : 0.0;
+      float pool = exp(-r2 / (l.z * l.z)) * (l.w > 0.0 ? 0.6 : 1.6);
+      lampLight += abs(l.w) * fl * (pool + bulb);
+    }
+    // (the night photo is graded ~10x down: a lit surface gets back to its daylight colour)
+    col += (col * lampLight * 12.0 + lampLight * 0.015) * uLampColor * (1.0 - uDay);
+
     // Fires light up what is around them, flickering
     vec3 fireLight = vec3(0.0);
     for (int i = 0; i < 8; i++) {
@@ -237,7 +326,9 @@ export const photoFragment = /* glsl */ `
     float side = smoothstep(0.0, 0.05, uv.x) * smoothstep(1.0, 0.95, uv.x);
     for (int i = 0; i < 8; i++) {
       vec4 f = uFires[i];
-      if (f.w <= 0.0) continue;
+      if (f.w == 0.0) continue;
+      bool burning = f.w > 0.0;
+      f.w = abs(f.w);
       float up = uv.y - (1.0 - f.y);                  // height above the fire (photo heights)
       if (up < -0.02) continue;
       float x = (uv.x - f.x) * aspect - up * up * 1.2; // leaning downwind
@@ -251,9 +342,20 @@ export const photoFragment = /* glsl */ `
       // Black smoke by day; lit orange from below at night
       vec3 smoke = mix(vec3(0.03, 0.022, 0.02), vec3(0.55, 0.2, 0.05), exp(-max(up, 0.0) * 30.0) * (1.0 - uDay)) * (0.7 + 0.6 * nn);
       smoke = mix(smoke, vec3(0.05, 0.045, 0.042) * (0.6 + 0.8 * nn), uDay * 0.7);
+      // Chimney smoke: pale grey by day, faintly lit by the moon at night
+      if (!burning) smoke = mix(vec3(0.02, 0.022, 0.03), vec3(0.55, 0.55, 0.56), uDay) * (0.75 + 0.5 * nn);
       smoke += vec3(0.25, 0.27, 0.35) * uFlash * 0.4;
       col = mix(col, smoke, dens);
       a = max(a, dens);
+    }
+
+    // Fog drifting through, thicker low down
+    if (uFog > 0.0) {
+      float t = uTime * 0.015;
+      float low = 1.0 - smoothstep(0.0, 0.75, uv.y);
+      float f = fbm(vec2(uv.x * 7.0 - t * 3.0, uv.y * 5.0 + sin(t * 2.0) * 0.3)) * 0.7 + fbm(vec2(uv.x * 19.0 + t * 5.0, uv.y * 11.0)) * 0.3;
+      float dens = smoothstep(0.35, 0.8, f) * (0.35 + 0.65 * low) * uFog;
+      col = mix(col, uFogColor, dens);
     }
 
     gl_FragColor = vec4(col, a);

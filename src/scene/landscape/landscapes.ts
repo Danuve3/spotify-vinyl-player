@@ -5,7 +5,9 @@ import { create } from 'zustand'
 // panorama, azimuth and elevation linear in the image: see
 // blender/landscapes.py) under a procedural sky, plus its own animated layer.
 
-export type LandscapeId = 'manhattan' | 'countryside' | 'sea' | 'future' | 'wasteland' | 'moon'
+import { THEMES, THEME_ORDER, type ThemeId } from './themeDefs'
+
+export type LandscapeId = 'manhattan' | 'countryside' | 'sea' | 'future' | 'wasteland' | 'moon' | ThemeId
 
 export interface Photo {
   url: string
@@ -55,6 +57,23 @@ export interface Landscape {
   /** Rain makes sense here (not on the Moon). */
   rain: boolean
   day: DayLook
+  /** Night lights in the photo: (u, v from the top, glow radius in u, strength). */
+  lamps?: [number, number, number, number][]
+  lampColor?: THREE.Vector3
+  /** Fires with smoke (strength > 0) or chimney smoke only (< 0): (u, v, radius, strength). */
+  fires?: [number, number, number, number][]
+  /** Water in the photo: v from the top (top, bottom), and optionally u (left, right). */
+  water?: [number, number] | [number, number, number, number]
+  /** Heat haze over the ground by day. */
+  shimmer?: number
+  lava?: number
+  /** Drifting fog and its colour by night and by day. */
+  fog?: number
+  fogNight?: THREE.Vector3
+  fogDay?: THREE.Vector3
+  aurora?: number
+  /** A second moon in the night sky. */
+  moon2?: THREE.Vector3
 }
 
 const deg = THREE.MathUtils.degToRad
@@ -84,6 +103,7 @@ const base = {
 }
 
 export const LANDSCAPES: Record<LandscapeId, Landscape> = {
+  ...THEMES,
   manhattan: {
     ...base,
     id: 'manhattan',
@@ -204,7 +224,7 @@ export const LANDSCAPES: Record<LandscapeId, Landscape> = {
   },
 }
 
-export const LANDSCAPE_ORDER: LandscapeId[] = ['manhattan', 'countryside', 'sea', 'future', 'wasteland', 'moon']
+export const LANDSCAPE_ORDER: LandscapeId[] = ['manhattan', 'countryside', 'sea', 'future', 'wasteland', 'moon', ...THEME_ORDER]
 
 const KEY = 'vinyl-room:landscape'
 

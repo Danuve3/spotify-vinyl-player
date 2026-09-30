@@ -4,13 +4,14 @@ import { useTexture } from '@react-three/drei'
 import * as THREE from 'three'
 import { PHOTO_R, UNIT, view } from './view'
 import { dirVertex, photoFragment, skyFragment } from './shaders'
-import { LANDSCAPES, LANDSCAPE_ORDER, useLandscape, type Landscape as Def, type LandscapeId } from './landscapes'
+import { LANDSCAPES, useLandscape, type Landscape as Def, type LandscapeId } from './landscapes'
 import { ManhattanLights } from './Manhattan'
 import { CountrysideLife } from './Countryside'
 import { Ocean } from './Ocean'
 import { Skyways } from './Future'
 import { Wasteland } from './Wasteland'
 import { MoonSky } from './Moon'
+import { THEME_LAYERS } from './themes'
 
 // The view out of the glass wall: the chosen landscape's photograph wrapped on
 // a band around the viewer, under a procedural sky, with its animated layer on
@@ -41,7 +42,16 @@ function apply(def: Def, night: THREE.Texture, day: THREE.Texture) {
   view.uSmoke.value = def.smoke
   view.uFlash.value = 0
   view.uCity.value = def.city
-  for (const f of view.uFires.value) f.set(0, 0, 0, 0)
+  view.uFires.value.forEach((f, i) => (def.fires?.[i] ? f.set(...def.fires[i]) : f.set(0, 0, 0, 0)))
+  view.uLamps.value.forEach((l, i) => (def.lamps?.[i] ? l.set(...def.lamps[i]) : l.set(0, 0, 0, 0)))
+  view.uLampColor.value.copy(def.lampColor ?? new THREE.Vector3(1, 0.62, 0.3))
+  const w = def.water ?? [0, 0]
+  view.uWater.value.set(w[0], w[1], w[2] ?? 0, w[3] ?? 1)
+  view.uShimmer.value = def.shimmer ?? 0
+  view.uLava.value = def.lava ?? 0
+  view.uFog.value = def.fog ?? 0
+  view.uAurora.value = def.aurora ?? 0
+  view.uMoon2.value.copy(def.moon2 ?? new THREE.Vector3())
   blend(def, view.uDay.value)
 }
 
@@ -53,6 +63,7 @@ function blend(def: Def, t: number) {
   view.uGlow.value.lerpVectors(def.glow, d.glow ?? def.glow, t)
   view.uClouds.value = THREE.MathUtils.lerp(def.clouds, d.clouds ?? def.clouds, t)
   view.uWind.value = THREE.MathUtils.lerp(def.wind, d.wind ?? def.wind, t)
+  if (def.fog) view.uFogColor.value.lerpVectors(def.fogNight ?? def.haze, def.fogDay ?? d.haze, t)
 }
 
 const LAYERS: Record<LandscapeId, ComponentType> = {
@@ -62,22 +73,11 @@ const LAYERS: Record<LandscapeId, ComponentType> = {
   future: Skyways,
   wasteland: Wasteland,
   moon: MoonSky,
+  ...THEME_LAYERS,
 }
 
 export function Landscape() {
   const id = useLandscape((s) => s.id)
-  // The other photos download in the background, so switching is quick
-  useEffect(() => {
-    const idle = (window as { requestIdleCallback?: (cb: () => void) => void }).requestIdleCallback ?? ((cb: () => void) => setTimeout(cb, 4000))
-    idle(() =>
-      LANDSCAPE_ORDER.forEach((l) => {
-        if (l === id) return
-        useTexture.preload(LANDSCAPES[l].photo.url)
-        useTexture.preload(LANDSCAPES[l].day.photo.url)
-      }),
-    )
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
   return (
     <Suspense fallback={null}>
       <View key={id} def={LANDSCAPES[id]} />

@@ -13,3 +13,5 @@ public/models/lightmaps/*.png
 
 # Source media kept out of the repo (large originals)
 sources/
+
+__pycache__/

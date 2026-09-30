@@ -45,6 +45,15 @@ function makeUniforms() {
     uWind: { value: 0 },
     uMirror: { value: 1 },
     uFires: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
+    uLamps: { value: Array.from({ length: 24 }, () => new THREE.Vector4()) },
+    uLampColor: { value: new THREE.Vector3(1, 0.62, 0.3) },
+    uWater: { value: new THREE.Vector4(0, 0, 0, 1) },
+    uShimmer: { value: 0 },
+    uLava: { value: 0 },
+    uFog: { value: 0 },
+    uFogColor: { value: new THREE.Vector3(0.5, 0.52, 0.55) },
+    uAurora: { value: 0 },
+    uMoon2: { value: new THREE.Vector3(0, 0, 0) },
   }
 }
 

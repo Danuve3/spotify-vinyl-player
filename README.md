@@ -55,8 +55,8 @@ El workflow `Deploy to GitHub Pages` también se puede lanzar a mano desde la pe
 - `src/vinyl/` — reparto en caras, mapa surco ↔ canción y texturas generadas (surcos, etiqueta, funda).
 - `src/audio/` — crackle, motor, aguja y surco final sintetizados con Web Audio.
 - `src/scene/` — escena React Three Fiber, cámara sentada y calidad adaptativa.
-- `src/scene/landscape/` — lo que se ve por la cristalera, a elegir: Manhattan, campo, mar, futurista, postapocalíptico o la Luna. Cada uno es una panorámica real bajo un cielo procedural (luna, nubes, estrellas, humo) con su propia animación (tráfico, luciérnagas, oleaje, vehículos voladores, fuegos, la Tierra girando).
-- `blender/landscapes.py` — recorta y etalona las panorámicas originales (en `sources/`, fuera del repo) a `public/landscapes/`, de noche y de día.
+- `src/scene/landscape/` — lo que se ve por la cristalera, a elegir entre dieciséis paisajes: Manhattan, campo, mar, futurista, postapocalíptico, la Luna, viejo oeste, medieval, ártico, volcánico, fantasía épica, bosque misterioso, antigüedad clásica, cyberpunk, steampunk y gótico. Cada uno es una panorámica real bajo un cielo procedural (luna, nubes, estrellas, humo) con su propia animación (tráfico, luciérnagas, oleaje, vehículos voladores, fuegos, la Tierra girando).
+- `blender/landscapes.py` y `blender/landscapes_themes.py` — recortan y etalonan las panorámicas originales (en `sources/`, fuera del repo) a `public/landscapes/`, de noche y de día.
 - `src/demo/` y `scripts/great78.py` — discos de demo sin cuenta: caras de 78 rpm de 1906 a 1925 del Great 78 Project (Internet Archive), agrupadas en cuatro LP con fundas hechas con las etiquetas fotografiadas de los discos. El audio se transmite desde archive.org; como las grabaciones ya traen su crepitado, el tocadiscos no añade el suyo.
 - `blender/bake_day.py` — hornea los lightmaps de día (`arch_day`, `furn_day`): lámpara apagada y luz de día por la cristalera. El modo día funde entre los lightmaps de noche y los de día, y la lámpara se suma encima.
 
@@ -72,6 +72,18 @@ Paisajes de la ventana (`public/landscapes/`, recortados, redimensionados y etal
 - Futurista: [*Panorama of Chongqing at night taken from Eling Park*](https://commons.wikimedia.org/wiki/File:Panorama_of_Chongqing_at_night_taken_from_Eling_Park.jpeg) y [*Panorama of Chongqing from tower in Eling park*](https://commons.wikimedia.org/wiki/File:Panorama_of_Chongqing_from_tower_in_Eling_park.jpg), [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 - Postapocalíptico: [*Pripyat panorama 2009-001*](https://commons.wikimedia.org/wiki/File:Pripyat_panorama_2009-001.jpg), [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/); etalonada al anochecer y a una calima de día, sin el cielo original.
 - Luna: [*Apollo 17 Landing Site Panorama during EVA1*](https://commons.wikimedia.org/wiki/File:Apollo_17_Landing_Site_Panorama_during_EVA1_JSC2007e045384.jpg), NASA (dominio público). La Tierra: *Blue Marble* de NASA Visible Earth (dominio público).
+- Viejo Oeste: [*Monument Valley Panorama*](https://commons.wikimedia.org/wiki/File:Monument_Valley_Panorama.jpg), de Michaelbleicher, CC BY-SA 4.0.
+- Medieval: [*Panorama de la Cité de Carcassonne*](https://commons.wikimedia.org/wiki/File:Panorama_de_la_Cit%C3%A9_de_Carcassonne-20190903.jpg), de Daniel Villafruela, CC BY-SA 4.0.
+- Ártico: [*Daudmannsflya Lexfjellet panorama*](https://commons.wikimedia.org/wiki/File:Daudmannsflya_Lexfjellet_panorama.JPG), de Bjoertvedt, CC BY-SA 3.0.
+- Volcánico: [*Holuhraun Fissure Eruption in Iceland*](https://commons.wikimedia.org/wiki/File:Holuhraun_Fissure_Eruption_in_Iceland_-_September_2014.jpg), de Robert Askew, CC BY-SA 3.0.
+- Fantasía épica: [*The Old Man of Storr – Panorama*](https://commons.wikimedia.org/wiki/File:The_old_man_of_Storr_-_Panorama.jpg), de Xavier St-Gelais, CC BY-SA 4.0.
+- Bosque misterioso: HDRI [*Misty Pines*](https://polyhaven.com/a/misty_pines), de Poly Haven (CC0).
+- Antigüedad clásica: HDRI [*Colosseum*](https://polyhaven.com/a/colosseum), de Poly Haven (CC0).
+- Cyberpunk: [*Lion Rock panorama 2018*](https://commons.wikimedia.org/wiki/File:1_lion_rock_panorama_2018.jpg), de Chensiyuan, CC BY-SA 4.0, y [*Hong Kong from Lion Rock*](https://commons.wikimedia.org/wiki/File:Hong_Kong_from_Lion_Rock.JPG), de Fredlyfish4, CC BY-SA 3.0.
+- Steampunk: HDRI [*Hamburg Canal*](https://polyhaven.com/a/hamburg_canal), de Poly Haven (CC0).
+- Gótico: [*Panorama Prague Castle 2014*](https://commons.wikimedia.org/wiki/File:Panorama-prague-castle-2014.jpg), de Jan Rybář (fotoguru.cz), CC BY-SA 3.0.
+
+Salvo en Manhattan, Mar y Futurista, la noche se obtiene de la misma foto de día (noche americana: exposición, color y cielo nocturno generado), así que día y noche muestran exactamente el mismo sitio. Dragones, dirigibles, aves, murciélagos, estepicursores, hologramas, chispas de lava, auroras, niebla y fuegos fatuos se generan en tiempo real.
 
 Discos de demo: grabaciones del [Great 78 Project](https://great78.archive.org/) del Internet Archive, publicadas en 1925 o antes (dominio público en EE. UU.); el audio se escucha directamente desde archive.org y las fundas (`public/demo/`) usan las fotos de las etiquetas de esos discos.
 
